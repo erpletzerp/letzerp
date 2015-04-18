@@ -25,7 +25,7 @@ class website_maker(object):
 			"title": self.company,
 			"published": 1,
 			"header": "<h1>{0}</h1>".format(self.tagline or "Headline")+\
-				'<p>'+_("This is an example website auto-generated from ERPNext")+"</p>"+\
+				'<p>This is an example website auto-generated from LetzERP</p>'+\
 				'<p><a class="btn btn-primary" href="/login">Login</a></p>',
 			"description": self.company + ":" + (self.tagline or ""),
 			"css": frappe.get_template("setup/page/setup_wizard/data/sample_home_page.css").render(),

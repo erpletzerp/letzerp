@@ -176,7 +176,8 @@ def send_email_notification(mr_list):
 	frappe.sendmail(recipients=email_list, subject='Auto Material Request Generation Notification', msg = msg)
 
 def notify_errors(exceptions_list):
-	subject = "[Important] [ERPNext] Auto Reorder Errors"
+	# subject = "[Important] [ERPNext] Auto Reorder Errors"
+	subject = "[Important] [LetzERP] Auto Reorder Errors"
 	content = """Dear System Manager,
 
 An error occured for certain Items while creating Material Requests based on Re-order level.

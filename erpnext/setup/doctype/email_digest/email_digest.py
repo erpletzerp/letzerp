@@ -82,8 +82,12 @@ class EmailDigest(Document):
 				msg_for_this_receipient = self.get_msg_html(self.get_user_specific_content(user_id) + \
 					common_msg)
 				if msg_for_this_receipient:
+					# frappe.sendmail(recipients=user_id,
+					# 	subject="[ERPNext] [{frequency} Digest] {name}".format(
+					# 		frequency=self.frequency, name=self.name),
+					# 	msg=msg_for_this_receipient, bulk=True)
 					frappe.sendmail(recipients=user_id,
-						subject="[ERPNext] [{frequency} Digest] {name}".format(
+						subject="[LetzERP] [{frequency} Digest] {name}".format(
 							frequency=self.frequency, name=self.name),
 						msg=msg_for_this_receipient, bulk=True)
 

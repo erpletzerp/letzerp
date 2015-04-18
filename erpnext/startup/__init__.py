@@ -21,7 +21,8 @@ from __future__ import unicode_literals
 
 import frappe
 
-product_name = "ERPNext"
+# product_name = "ERPNext"
+product_name = "LetzERP"
 user_defaults = {
 	"Company": "company",
 	"Territory": "territory"

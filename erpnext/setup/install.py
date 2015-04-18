@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import frappe
 
 default_mail_footer = """<div style="padding: 7px; text-align: right; color: #888"><small>Sent via
-	<a style="color: #888" href="http://erpnext.org">ERPNext</a></div>"""
+	<a style="color: #888" href="http://erpnext.org">LetzERP</a></div>"""
 
 def after_install():
 	frappe.get_doc({'doctype': "Role", "role_name": "Analytics"}).insert()
