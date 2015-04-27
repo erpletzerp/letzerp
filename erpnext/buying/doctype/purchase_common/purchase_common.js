@@ -249,7 +249,7 @@ erpnext.buying.BuyingController = erpnext.TransactionController.extend({
 			this.frm.doc.conversion_rate, precision("other_charges_deducted_import"));
 	},
 
-	_cleanup: function() {
+	/*_cleanup: function() {
 		this._super();
 		this.frm.doc.in_words = this.frm.doc.in_words_import = "";
 
@@ -266,6 +266,30 @@ erpnext.buying.BuyingController = erpnext.TransactionController.extend({
 				$.each(this.frm.doc["taxes"] || [], function(i, tax) {
 					delete tax["tax_amount_after_discount_amount"];
 				});
+			}
+		}
+	},*/
+
+	_cleanup: function() {
+		this._super();
+		this.frm.doc.in_words = this.frm.doc.in_words_import = "";
+		if(this.frm.doc["items"]) {
+			if(this.frm.doc["items"].length){
+				if(!frappe.meta.get_docfield(this.frm.doc["items"][0].doctype, "item_tax_amount", this.frm.doctype)) {
+					$.each(this.frm.doc["items"] || [], function(i, item) {
+						delete item["item_tax_amount"];
+					});
+				}
+			}
+		}
+
+		if(this.frm.doc["taxes"]) {
+			if(this.frm.doc["taxes"].length){
+				if(!frappe.meta.get_docfield(this.frm.doc["taxes"][0].doctype, "tax_amount_after_discount_amount", this.frm.doctype)) {
+					$.each(this.frm.doc["taxes"] || [], function(i, tax) {
+						delete tax["tax_amount_after_discount_amount"];
+					});
+				}
 			}
 		}
 	},

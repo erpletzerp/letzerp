@@ -67,4 +67,4 @@ scheduler_events = {
 }
 
 default_mail_footer = """<div style="padding: 7px; text-align: right;">
-	<a style="color: #888; font-size: 80%;" href="https://erpnext.com">Sent via ERPNext</a></div>"""
+	<a style="color: #888; font-size: 80%;" href="https://erpnext.com">Sent via LetzERP</a></div>"""

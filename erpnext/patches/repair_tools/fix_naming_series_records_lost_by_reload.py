@@ -195,13 +195,13 @@ def rename_docs():
 				log("Renamed {doctype} {name} --> {fixed_name}".format(doctype=doctype, name=name, fixed_name=fixed_name))
 
 	if commit:
-		content = """These documents have been renamed in your ERPNext instance: {site}\n\n{_log}""".format(site=frappe.local.site, _log="\n".join(_log))
+		content = """These documents have been renamed in your LetzERP instance: {site}\n\n{_log}""".format(site=frappe.local.site, _log="\n".join(_log))
 
 		print content
 
 		frappe.db.commit()
 
-		sendmail_to_system_managers("[Important] [ERPNext] Renamed Documents via Patch", content)
+		sendmail_to_system_managers("[Important] [LetzERP] Renamed Documents via Patch", content)
 
 def fix_comments():
 	renamed_docs_comments = frappe.db.sql("""select name, comment, comment_doctype, comment_docname
