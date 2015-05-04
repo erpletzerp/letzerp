@@ -6,10 +6,10 @@ frappe.provide('erpnext');
 // add toolbar icon
 $(document).bind('toolbar_setup', function() {
 	// frappe.app.name = "ERPNext";
-	frappe.app.name = "LetzERP";
+	frappe.app.name = "letzERP";
 
 	// $('.navbar-home').html('ERPNext');
-	$('.navbar-home').html('LetzERP');
+	$('.navbar-home').html('letzERP');
 
 	$('[data-link="docs"]').attr("href", "https://erpnext.com/user-guide")
 });

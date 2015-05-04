@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 import frappe
 
 # product_name = "ERPNext"
-product_name = "LetzERP"
+product_name = "letzERP"
 user_defaults = {
 	"Company": "company",
 	"Territory": "territory"

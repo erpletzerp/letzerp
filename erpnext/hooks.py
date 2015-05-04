@@ -1,6 +1,6 @@
 app_name = "erpnext"
-app_title = "LetzERP"
-app_publisher = "LetzERP Pvt. Ltd. and Contributors"
+app_title = "letzERP"
+app_publisher = "letzERP Pvt. Ltd. and Contributors"
 app_description = "Open Source Enterprise Resource Planning for Small and Midsized Organizations"
 app_icon = "icon-th"
 app_color = "#e74c3c"
@@ -67,4 +67,4 @@ scheduler_events = {
 }
 
 default_mail_footer = """<div style="padding: 7px; text-align: right;">
-	<a style="color: #888; font-size: 80%;" href="https://erpnext.com">Sent via LetzERP</a></div>"""
+	<a style="color: #888; font-size: 80%;" href="https://erpnext.com">Sent via letzERP</a></div>"""

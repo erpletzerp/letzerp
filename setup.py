@@ -10,7 +10,7 @@ setup(
     version=version,
     description='Open Source ERP',
     # author='Web Notes Technologies',
-    author='LetzERP',
+    author='letzERP',
     author_email='info@letzerp.com',
     packages=find_packages(),
     zip_safe=False,
