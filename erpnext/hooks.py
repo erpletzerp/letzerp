@@ -6,7 +6,7 @@ app_icon = "icon-th"
 app_color = "#e74c3c"
 app_version = "5.0.0-alpha"
 
-error_report_email = "support@erpnext.com"
+error_report_email = "support@indictranstech.com"
 
 app_include_js = "assets/js/erpnext.min.js"
 app_include_css = "assets/css/erpnext.css"
