@@ -9,7 +9,7 @@ $(document).bind('toolbar_setup', function() {
 	frappe.app.name = "letzERP";
 
 	// $('.navbar-home').html('ERPNext');
-	$('.navbar-home').html('letzERP');
+	$('.navbar-home').html("<img src='/files/letzerp.jpg' style='max-width: 250px;height:30px'>");
 
 	$('[data-link="docs"]').attr("href", "https://erpnext.com/user-guide")
 });
