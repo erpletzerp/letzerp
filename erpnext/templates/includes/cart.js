@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 // js inside blog page
@@ -8,7 +8,8 @@ frappe.provide("shopping_cart");
 
 $.extend(shopping_cart, {
 	show_error: function(title, text) {
-		$("#cart-container").html('<div class="msg-box"><h4>' + title + '</h4> ' + text + '</div>');
+		$("#cart-container").html('<div class="msg-box"><h4>' +
+			title + '</h4><p class="text-muted">' + text + '</p></div>');
 	},
 
 	bind_events: function() {
@@ -31,11 +32,11 @@ $.extend(shopping_cart, {
 		});
 
 		$("#cart-add-shipping-address").on("click", function() {
-			window.location.href = "address?address_fieldname=shipping_address_name";
+			window.location.href = "addresses";
 		});
 
 		$("#cart-add-billing-address").on("click", function() {
-			window.location.href = "address?address_fieldname=customer_address";
+			window.location.href = "address";
 		});
 
 		$(".btn-place-order").on("click", function() {
@@ -56,7 +57,7 @@ $.extend(shopping_cart, {
 		var no_items = $.map(doc.items || [],
 			function(d) { return d.item_code || null;}).length===0;
 		if(no_items) {
-			shopping_cart.show_error("Empty :-(", frappe._("Go ahead and add something to your cart."));
+			shopping_cart.show_error("Cart Empty", frappe._("Go ahead and add something to your cart."));
 			$("#cart-addresses").toggle(false);
 			return;
 		}
@@ -105,8 +106,7 @@ $.extend(shopping_cart, {
 
 	render_item_row: function($cart_items, doc) {
 		doc.image_html = doc.website_image ?
-			'<div style="height: 120px; overflow: hidden;"><img src="' + doc.website_image + '" /></div>' :
-			'{% include "templates/includes/product_missing_image.html" %}';
+		'<div style="height: 120px; overflow: hidden;"><img src="' + doc.website_image + '" /></div>': "";
 
 		if(doc.description === doc.item_name) doc.description = "";
 
@@ -265,7 +265,7 @@ $.extend(shopping_cart, {
 						.html(msg || frappe._("Something went wrong!"))
 						.toggle(true);
 				} else {
-					window.location.href = "order?name=" + encodeURIComponent(r.message);
+					window.location.href = "/orders/" + encodeURIComponent(r.message);
 				}
 			}
 		});
@@ -282,11 +282,11 @@ $(document).ready(function() {
 			$(".progress").remove();
 			if(r.exc) {
 				if(r.exc.indexOf("WebsitePriceListMissingError")!==-1) {
-					shopping_cart.show_error("Oops!", frappe._("Price List not configured."));
+					shopping_cart.show_error("Configuration Error", frappe._("Price List not configured."));
 				} else if(r["403"]) {
-					shopping_cart.show_error("Hey!", frappe._("You need to be logged in to view your cart."));
+					shopping_cart.show_error("Not Allowed", frappe._("You need to be logged in to view your cart."));
 				} else {
-					shopping_cart.show_error("Oops!", frappe._("Something went wrong."));
+					shopping_cart.show_error("Error", frappe._("Something went wrong."));
 				}
 			} else {
 				shopping_cart.set_cart_count();

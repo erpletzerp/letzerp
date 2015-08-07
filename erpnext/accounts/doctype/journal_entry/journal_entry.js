@@ -1,10 +1,10 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 frappe.provide("erpnext.accounts");
 frappe.require("assets/erpnext/js/utils.js");
 
-erpnext.accounts.JournalVoucher = frappe.ui.form.Controller.extend({
+erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 	onload: function() {
 		this.load_defaults();
 		this.setup_queries();
@@ -36,7 +36,7 @@ erpnext.accounts.JournalVoucher = frappe.ui.form.Controller.extend({
 				return {
 					filters: {
 						company: me.frm.doc.company,
-						group_or_ledger: "Ledger"
+						is_group: 0
 					}
 				};
 			});
@@ -52,12 +52,13 @@ erpnext.accounts.JournalVoucher = frappe.ui.form.Controller.extend({
 			["against_invoice", "Sales Invoice", "customer"]], function(i, opts) {
 				me.frm.set_query(opts[0], "accounts", function(doc, cdt, cdn) {
 					var jvd = frappe.get_doc(cdt, cdn);
-					frappe.model.validate_missing(jvd, ["party_type", "party"]);
+					frappe.model.validate_missing(jvd, "party_type");
+					frappe.model.validate_missing(jvd, "party");
 					return {
 						filters: [
 							[opts[1], opts[2], "=", jvd.party],
 							[opts[1], "docstatus", "=", 1],
-							[opts[1], "outstanding_amount", ">", 0]
+							[opts[1], "outstanding_amount", "!=", 0]
 						]
 					};
 				});
@@ -108,7 +109,7 @@ erpnext.accounts.JournalVoucher = frappe.ui.form.Controller.extend({
 
 	against_jv: function(doc, cdt, cdn) {
 		var d = frappe.get_doc(cdt, cdn);
-		if (d.against_jv && d.party && !flt(d.credit) && !flt(d.debit)) {
+		if (d.against_jv && !flt(d.credit) && !flt(d.debit)) {
 			this.get_outstanding('Journal Entry', d.against_jv, d);
 		}
 	},
@@ -118,7 +119,8 @@ erpnext.accounts.JournalVoucher = frappe.ui.form.Controller.extend({
 		var args = {
 			"doctype": doctype,
 			"docname": docname,
-			"party": child.party
+			"party": child.party,
+			"account": child.account
 		}
 
 		return this.frm.call({
@@ -129,15 +131,36 @@ erpnext.accounts.JournalVoucher = frappe.ui.form.Controller.extend({
 				cur_frm.cscript.update_totals(me.frm.doc);
 			}
 		});
-	}
+	},
+
+	accounts_add: function(doc, cdt, cdn) {
+		var row = frappe.get_doc(cdt, cdn);
+		$.each(doc.accounts, function(i, d) {
+			if(d.account && d.party && d.party_type) {
+				row.account = d.account;
+				row.party = d.party;
+				row.party_type = d.party_type;
+			}
+		});
+
+		// set difference
+		if(doc.difference) {
+			if(doc.difference > 0) {
+				row.credit = doc.difference;
+			} else {
+				row.debit = -doc.difference;
+			}
+		}
+	},
+
 });
 
-cur_frm.script_manager.make(erpnext.accounts.JournalVoucher);
+cur_frm.script_manager.make(erpnext.accounts.JournalEntry);
 
 cur_frm.cscript.refresh = function(doc) {
-	cur_frm.cscript.is_opening(doc)
 	erpnext.toggle_naming_series();
 	cur_frm.cscript.voucher_type(doc);
+
 	if(doc.docstatus==1) {
 		cur_frm.add_custom_button(__('View Ledger'), function() {
 			frappe.route_options = {
@@ -159,11 +182,6 @@ cur_frm.cscript.company = function(doc, cdt, cdn) {
 
 cur_frm.cscript.posting_date = function(doc, cdt, cdn){
 	erpnext.get_fiscal_year(doc.company, doc.posting_date);
-}
-
-cur_frm.cscript.is_opening = function(doc, cdt, cdn) {
-	hide_field('aging_date');
-	if (doc.is_opening == 'Yes') unhide_field('aging_date');
 }
 
 cur_frm.cscript.update_totals = function(doc) {
@@ -223,48 +241,49 @@ cur_frm.cscript.voucher_type = function(doc, cdt, cdn) {
 	cur_frm.set_df_property("cheque_no", "reqd", doc.voucher_type=="Bank Entry");
 	cur_frm.set_df_property("cheque_date", "reqd", doc.voucher_type=="Bank Entry");
 
-	if((doc.accounts || []).length!==0 || !doc.company) // too early
-		return;
+	if(!doc.company) return;
 
 	var update_jv_details = function(doc, r) {
 		var jvdetail = frappe.model.add_child(doc, "Journal Entry Account", "accounts");
 		$.each(r, function(i, d) {
 			var row = frappe.model.add_child(doc, "Journal Entry Account", "accounts");
-			row.account = d.cash_bank_account;
+			row.account = d.account;
 			row.balance = d.balance;
 		});
 		refresh_field("accounts");
 	}
 
-	if(in_list(["Bank Entry", "Cash Entry"], doc.voucher_type)) {
-		return frappe.call({
-			type: "GET",
-			method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_default_bank_cash_account",
-			args: {
-				"voucher_type": doc.voucher_type,
-				"company": doc.company
-			},
-			callback: function(r) {
-				if(r.message) {
-					update_jv_details(doc, [r.message]);
+	if(!(doc.accounts || []).length) {
+		if(in_list(["Bank Entry", "Cash Entry"], doc.voucher_type)) {
+			return frappe.call({
+				type: "GET",
+				method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_default_bank_cash_account",
+				args: {
+					"voucher_type": doc.voucher_type,
+					"company": doc.company
+				},
+				callback: function(r) {
+					if(r.message) {
+						update_jv_details(doc, [r.message]);
+					}
 				}
-			}
-		})
-	} else if(doc.voucher_type=="Opening Entry") {
-		return frappe.call({
-			type:"GET",
-			method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_opening_accounts",
-			args: {
-				"company": doc.company
-			},
-			callback: function(r) {
-				frappe.model.clear_table(doc, "accounts");
-				if(r.message) {
-					update_jv_details(doc, r.message);
+			})
+		} else if(doc.voucher_type=="Opening Entry") {
+			return frappe.call({
+				type:"GET",
+				method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_opening_accounts",
+				args: {
+					"company": doc.company
+				},
+				callback: function(r) {
+					frappe.model.clear_table(doc, "accounts");
+					if(r.message) {
+						update_jv_details(doc, r.message);
+					}
+					cur_frm.set_value("is_opening", "Yes")
 				}
-				cur_frm.set_value("is_opening", "Yes")
-			}
-		})
+			})
+		}
 	}
 }
 

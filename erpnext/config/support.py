@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from frappe import _
 
 def get_data():
@@ -13,8 +14,8 @@ def get_data():
 				},
 				{
 					"type": "doctype",
-					"name": "Customer Issue",
-					"description": _("Customer Issue against Serial No."),
+					"name": "Warranty Claim",
+					"description": _("Warranty Claim against Serial No."),
 				},
 				{
 					"type": "doctype",

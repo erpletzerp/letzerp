@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -11,7 +11,6 @@ def execute(filters=None):
 
 	invoice_list = get_invoices(filters)
 	columns, expense_accounts, tax_accounts = get_columns(invoice_list)
-
 
 	if not invoice_list:
 		msgprint(_("No record found"))
@@ -30,19 +29,20 @@ def execute(filters=None):
 		purchase_receipt = list(set(invoice_po_pr_map.get(inv.name, {}).get("purchase_receipt", [])))
 		project_name = list(set(invoice_po_pr_map.get(inv.name, {}).get("project_name", [])))
 
-		row = [inv.name, inv.posting_date, inv.supplier, inv.supplier_name, supplier_details.get(inv.supplier),
+		row = [inv.name, inv.posting_date, inv.supplier, inv.supplier_name, 
+			supplier_details.get(inv.supplier),
 			inv.credit_to, ", ".join(project_name), inv.bill_no, inv.bill_date, inv.remarks,
 			", ".join(purchase_order), ", ".join(purchase_receipt)]
 
 		# map expense values
-		net_total = 0
+		base_net_total = 0
 		for expense_acc in expense_accounts:
 			expense_amount = flt(invoice_expense_map.get(inv.name, {}).get(expense_acc))
-			net_total += expense_amount
+			base_net_total += expense_amount
 			row.append(expense_amount)
 
 		# net total
-		row.append(net_total or inv.net_total)
+		row.append(base_net_total or inv.base_net_total)
 
 		# tax account
 		total_tax = 0
@@ -53,9 +53,8 @@ def execute(filters=None):
 				row.append(tax_amount)
 
 		# total tax, grand total, outstanding amount & rounded total
-		row += [total_tax, inv.grand_total, flt(inv.grand_total, 2), inv.outstanding_amount]
-		data.append(row)
-		# raise Exception
+		row += [total_tax, inv.base_grand_total, flt(inv.base_grand_total, 2), inv.outstanding_amount]
+		data.append(row)		
 
 	return columns, data
 
@@ -107,14 +106,14 @@ def get_conditions(filters):
 
 def get_invoices(filters):
 	conditions = get_conditions(filters)
-	return frappe.db.sql("""select name, posting_date, credit_to, supplier, supplier_name
-		bill_no, bill_date, remarks, net_total, grand_total, outstanding_amount
+	return frappe.db.sql("""select name, posting_date, credit_to, supplier, supplier_name,
+		bill_no, bill_date, remarks, base_net_total, base_grand_total, outstanding_amount
 		from `tabPurchase Invoice` where docstatus = 1 %s
 		order by posting_date desc, name desc""" % conditions, filters, as_dict=1)
 
 
 def get_invoice_expense_map(invoice_list):
-	expense_details = frappe.db.sql("""select parent, expense_account, sum(base_amount) as amount
+	expense_details = frappe.db.sql("""select parent, expense_account, sum(base_net_amount) as amount
 		from `tabPurchase Invoice Item` where parent in (%s) group by parent, expense_account""" %
 		', '.join(['%s']*len(invoice_list)), tuple([inv.name for inv in invoice_list]), as_dict=1)
 
@@ -126,7 +125,7 @@ def get_invoice_expense_map(invoice_list):
 	return invoice_expense_map
 
 def get_invoice_tax_map(invoice_list, invoice_expense_map, expense_accounts):
-	tax_details = frappe.db.sql("""select parent, account_head, sum(tax_amount) as tax_amount
+	tax_details = frappe.db.sql("""select parent, account_head, sum(base_tax_amount_after_discount_amount) as tax_amount
 		from `tabPurchase Taxes and Charges` where parent in (%s) group by parent, account_head""" %
 		', '.join(['%s']*len(invoice_list)), tuple([inv.name for inv in invoice_list]), as_dict=1)
 
@@ -144,7 +143,7 @@ def get_invoice_tax_map(invoice_list, invoice_expense_map, expense_accounts):
 	return invoice_expense_map, invoice_tax_map
 
 def get_invoice_po_pr_map(invoice_list):
-	pi_items = frappe.db.sql("""select parent, purchase_order, purchase_receipt, po_detail
+	pi_items = frappe.db.sql("""select parent, purchase_order, purchase_receipt, po_detail, 
 		project_name from `tabPurchase Invoice Item` where parent in (%s)
 		and (ifnull(purchase_order, '') != '' or ifnull(purchase_receipt, '') != '')""" %
 		', '.join(['%s']*len(invoice_list)), tuple([inv.name for inv in invoice_list]), as_dict=1)
@@ -160,7 +159,7 @@ def get_invoice_po_pr_map(invoice_list):
 			pr_list = [d.purchase_receipt]
 		elif d.po_detail:
 			pr_list = frappe.db.sql_list("""select distinct parent from `tabPurchase Receipt Item`
-				where docstatus=1 and prevdoc_detail_docname=%s""", d.pr_detail)
+				where docstatus=1 and prevdoc_detail_docname=%s""", d.po_detail)
 
 		if pr_list:
 			invoice_po_pr_map.setdefault(d.parent, frappe._dict()).setdefault("purchase_receipt", pr_list)

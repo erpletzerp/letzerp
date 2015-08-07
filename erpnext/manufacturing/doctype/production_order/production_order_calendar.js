@@ -1,12 +1,12 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 frappe.views.calendar["Production Order"] = {
 	field_map: {
-		"start": "production_start_date",
-		"end": "production_end_date",
+		"start": "planned_start_date",
+		"end": "planned_end_date",
 		"id": "name",
-		"title": "production_item",
+		"title": "name",
 		"allDay": "allDay"
 	},
 	gantt: true,

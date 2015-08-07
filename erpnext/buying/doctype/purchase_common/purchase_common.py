@@ -1,9 +1,9 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
 import frappe
-from frappe.utils import flt
+from frappe.utils import flt, cstr
 from frappe import _
 
 from erpnext.stock.doctype.item.item import get_last_purchase_details
@@ -39,10 +39,9 @@ class PurchaseCommon(BuyingController):
 					(flt(last_purchase_rate), d.item_code))
 
 	def validate_for_items(self, obj):
-		check_list, chk_dupl_itm=[],[]
+		items = []
 		for d in obj.get("items"):
-			# validation for valid qty
-			if flt(d.qty) < 0 or (d.parenttype != 'Purchase Receipt' and not flt(d.qty)):
+			if not d.qty:
 				frappe.throw(_("Please enter quantity for Item {0}").format(d.item_code))
 
 			# udpate with latest quantities
@@ -57,44 +56,25 @@ class PurchaseCommon(BuyingController):
 					d.set(x, f_lst[x])
 
 			item = frappe.db.sql("""select is_stock_item, is_purchase_item,
-				is_sub_contracted_item, end_of_life from `tabItem` where name=%s""", d.item_code)
+				is_sub_contracted_item, end_of_life from `tabItem` where name=%s""",
+				d.item_code, as_dict=1)[0]
 
 			from erpnext.stock.doctype.item.item import validate_end_of_life
-			validate_end_of_life(d.item_code, item[0][3])
+			validate_end_of_life(d.item_code, item.end_of_life)
 
 			# validate stock item
-			if item[0][0]=='Yes' and d.qty and not d.warehouse:
+			if item.is_stock_item==1 and d.qty and not d.warehouse:
 				frappe.throw(_("Warehouse is mandatory for stock Item {0} in row {1}").format(d.item_code, d.idx))
 
 			# validate purchase item
 			if not (obj.doctype=="Material Request" and getattr(obj, "material_request_type", None)=="Material Transfer"):
-				if item[0][1] != 'Yes' and item[0][2] != 'Yes':
+				if item.is_purchase_item != 1 and item.is_sub_contracted_item != 1:
 					frappe.throw(_("{0} must be a Purchased or Sub-Contracted Item in row {1}").format(d.item_code, d.idx))
 
-			# list criteria that should not repeat if item is stock item
-			e = [getattr(d, "schedule_date", None), d.item_code, d.description, d.warehouse, d.uom,
-				d.meta.get_field('prevdoc_docname') and d.prevdoc_docname or d.meta.get_field('sales_order_no') and d.sales_order_no or '',
-				d.meta.get_field('prevdoc_detail_docname') and d.prevdoc_detail_docname or '',
-				d.meta.get_field('batch_no') and d.batch_no or '']
+			items.append(cstr(d.item_code))
+		if items and len(items) != len(set(items)):
+			frappe.msgprint(_("Warning: Same item has been entered multiple times."))
 
-			# if is not stock item
-			f = [getattr(d, "schedule_date", None), d.item_code, d.description]
-
-			ch = frappe.db.sql("""select is_stock_item from `tabItem` where name = %s""", d.item_code)
-
-			if ch and ch[0][0] == 'Yes':
-				# check for same items
-				if e in check_list:
-					frappe.throw(_("Item {0} has been entered multiple times with same description or date or warehouse").format(d.item_code))
-				else:
-					check_list.append(e)
-
-			elif ch and ch[0][0] == 'No':
-				# check for same items
-				if f in chk_dupl_itm:
-					frappe.throw(_("Item {0} has been entered multiple times with same description or date").format(d.item_code))
-				else:
-					chk_dupl_itm.append(f)
 
 	def check_for_stopped_status(self, doctype, docname):
 		stopped = frappe.db.sql("""select name from `tab%s` where name = %s and

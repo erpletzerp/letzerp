@@ -10,7 +10,7 @@
   {
    "fieldname": "basic_information", 
    "fieldtype": "Section Break", 
-   "label": "Basic Information", 
+   "label": "", 
    "oldfieldtype": "Section Break", 
    "permlevel": 0
   }, 
@@ -19,14 +19,6 @@
    "fieldtype": "Column Break", 
    "permlevel": 0, 
    "width": "50%"
-  }, 
-  {
-   "fieldname": "image_view", 
-   "fieldtype": "Image", 
-   "in_list_view": 0, 
-   "label": "Image View", 
-   "options": "image", 
-   "permlevel": 0
   }, 
   {
    "fieldname": "employee", 
@@ -71,9 +63,17 @@
   }, 
   {
    "fieldname": "image", 
-   "fieldtype": "Select", 
+   "fieldtype": "Attach", 
    "label": "Image", 
-   "options": "attach_files:", 
+   "options": "", 
+   "permlevel": 0
+  }, 
+  {
+   "fieldname": "image_view", 
+   "fieldtype": "Image", 
+   "in_list_view": 0, 
+   "label": "Image View", 
+   "options": "image", 
    "permlevel": 0
   }, 
   {
@@ -290,6 +290,7 @@
    "label": "Company Email", 
    "oldfieldname": "company_email", 
    "oldfieldtype": "Data", 
+   "options": "Email", 
    "permlevel": 0, 
    "reqd": 0
   }, 
@@ -385,6 +386,7 @@
    "fieldname": "personal_email", 
    "fieldtype": "Data", 
    "label": "Personal Email", 
+   "options": "Email", 
    "permlevel": 0
   }, 
   {
@@ -453,7 +455,7 @@
   {
    "fieldname": "sb53", 
    "fieldtype": "Section Break", 
-   "label": "Bio", 
+   "label": "", 
    "permlevel": 0
   }, 
   {
@@ -674,7 +676,7 @@
  ], 
  "icon": "icon-user", 
  "idx": 1, 
- "modified": "2015-01-07 14:37:39.988374", 
+ "modified": "2015-07-09 02:25:20.987412", 
  "modified_by": "Administrator", 
  "module": "HR", 
  "name": "Employee", 
@@ -705,6 +707,7 @@
    "read": 1, 
    "report": 1, 
    "role": "HR User", 
+   "share": 1, 
    "submit": 0, 
    "user_permission_doctypes": "[\"Branch\",\"Company\",\"Department\",\"Designation\"]", 
    "write": 1
@@ -720,6 +723,7 @@
    "report": 1, 
    "role": "HR Manager", 
    "set_user_permissions": 1, 
+   "share": 1, 
    "submit": 0, 
    "write": 1
   }

@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 /* features setup "Dictionary", "Script"
@@ -13,7 +13,8 @@ Dictionary Format
 		}
 	}
 // ====================================================================*/
-pscript.feature_dict = {
+frappe.provide("erpnext.feature_setup");
+erpnext.feature_setup.feature_dict = {
 	'fs_projects': {
 		'BOM': {'fields':['project_name']},
 		'Delivery Note': {'fields':['project_name']},
@@ -45,7 +46,7 @@ pscript.feature_dict = {
 		'Purchase Invoice': {'items':['brand']},
 		'Quotation': {'items':['brand']},
 		'Sales Invoice': {'items':['brand']},
-		'Sales BOM': {'fields':['new_item_brand']},
+		'Product Bundle': {'fields':['new_item_brand']},
 		'Sales Order': {'items':['brand']},
 		'Serial No': {'fields':['brand']}
 	},
@@ -63,7 +64,7 @@ pscript.feature_dict = {
 		'Stock Ledger Entry': {'fields':['batch_no']}
 	},
 	'fs_item_serial_nos': {
-		'Customer Issue': {'fields':['serial_no']},
+		'Warranty Claim': {'fields':['serial_no']},
 		'Delivery Note': {'items':['serial_no'],'packed_items':['serial_no']},
 		'Installation Note': {'items':['serial_no']},
 		'Item': {'fields':['has_serial_no']},
@@ -79,7 +80,9 @@ pscript.feature_dict = {
 	'fs_item_barcode': {
 		'Item': {'fields': ['barcode']},
 		'Delivery Note': {'items': ['barcode']},
-		'Sales Invoice': {'items': ['barcode']}
+		'Sales Invoice': {'items': ['barcode']},
+		'Stock Entry': {'items': ['barcode']},
+		'Purchase Receipt': {'items': ['barcode']}
 	},
 	'fs_item_group_in_details': {
 		'Delivery Note': {'items':['item_group']},
@@ -92,7 +95,7 @@ pscript.feature_dict = {
 		'Purchase Voucher': {'items':['item_group']},
 		'Quotation': {'items':['item_group']},
 		'Sales Invoice': {'items':['item_group']},
-		'Sales BOM': {'fields':['serial_no']},
+		'Product Bundle': {'fields':['serial_no']},
 		'Sales Order': {'items':['item_group']},
 		'Serial No': {'fields':['item_group']},
 		'Sales Partner': {'targets':['item_group']},
@@ -110,34 +113,54 @@ pscript.feature_dict = {
 		'Sales Order': {'items':['page_break']}
 	},
 	'fs_exports': {
-		'Delivery Note': {'fields':['conversion_rate','currency','grand_total','in_words','rounded_total'],'items':['base_price_list_rate','base_amount','base_rate']},
-		'POS Setting': {'fields':['conversion_rate','currency']},
-		'Quotation': {'fields':['conversion_rate','currency','grand_total','in_words','rounded_total'],'items':['base_price_list_rate','base_amount','base_rate']},
-		'Sales Invoice': {'fields':['conversion_rate','currency','grand_total','in_words','rounded_total'],'items':['base_price_list_rate','base_amount','base_rate']},
-		'Sales BOM': {'fields':['currency']},
-		'Sales Order': {'fields':['conversion_rate','currency','grand_total','in_words','rounded_total'],'items':['base_price_list_rate','base_amount','base_rate']}
+		'Delivery Note': {
+			'fields': ['conversion_rate','currency','base_grand_total','base_in_words','base_rounded_total',
+				'base_total', 'base_net_total', 'base_discount_amount', 'base_total_taxes_and_charges'],
+			'items': ['base_price_list_rate','base_amount','base_rate', 'base_net_rate', 'base_net_amount']
+		},
+		'POS Profile': {'fields':['conversion_rate','currency']},
+		'Quotation': {
+			'fields': ['conversion_rate','currency','base_grand_total','base_in_words','base_rounded_total',
+				'base_total', 'base_net_total', 'base_discount_amount', 'base_total_taxes_and_charges'],
+			'items': ['base_price_list_rate','base_amount','base_rate', 'base_net_rate', 'base_net_amount']
+		},
+		'Sales Invoice': {
+			'fields': ['conversion_rate','currency','base_grand_total','base_in_words','base_rounded_total',
+				'base_total', 'base_net_total', 'base_discount_amount', 'base_total_taxes_and_charges'],
+			'items': ['base_price_list_rate','base_amount','base_rate', 'base_net_rate', 'base_net_amount']
+		},
+		'Product Bundle': {'fields':['currency']},
+		'Sales Order': {
+			'fields': ['conversion_rate','currency','base_grand_total','base_in_words','base_rounded_total',
+				'base_total', 'base_net_total', 'base_discount_amount', 'base_total_taxes_and_charges'],
+			'items': ['base_price_list_rate','base_amount','base_rate', 'base_net_rate', 'base_net_amount']
+		}
 	},
 
 	'fs_imports': {
 		'Purchase Invoice': {
-			'fields': ['conversion_rate', 'currency', 'grand_total',
-		 		'in_words', 'net_total', 'other_charges_added',
-		 		'other_charges_deducted'],
-			'items': ['base_price_list_rate', 'base_amount','base_rate']
+			'fields': ['conversion_rate', 'currency', 'base_grand_total', 'base_discount_amount',
+		 		'base_in_words', 'base_total', 'base_net_total', 'base_taxes_and_charges_added',
+		 		'base_taxes_and_charges_deducted', 'base_total_taxes_and_charges'],
+			'items': ['base_price_list_rate', 'base_amount','base_rate', 'base_net_rate', 'base_net_amount']
 		},
 		'Purchase Order': {
-			'fields': ['conversion_rate','currency', 'grand_total',
-			'in_words', 'net_total', 'other_charges_added',
-			 'other_charges_deducted'],
-			'items': ['base_price_list_rate', 'base_amount','base_rate']
+			'fields': ['conversion_rate','currency', 'base_grand_total', 'base_discount_amount',
+				'base_in_words', 'base_total', 'base_net_total', 'base_taxes_and_charges_added',
+			 	'base_taxes_and_charges_deducted', 'base_total_taxes_and_charges'],
+			'items': ['base_price_list_rate', 'base_amount','base_rate', 'base_net_rate', 'base_net_amount']
 		},
 		'Purchase Receipt': {
-			'fields': ['conversion_rate', 'currency','grand_total', 'in_words',
-			 	'net_total', 'other_charges_added', 'other_charges_deducted'],
-			'items': ['base_price_list_rate','base_amount','base_rate']
+			'fields': ['conversion_rate', 'currency','base_grand_total', 'base_in_words', 'base_total',
+			 	'base_net_total', 'base_taxes_and_charges_added', 'base_taxes_and_charges_deducted',
+				'base_total_taxes_and_charges', 'base_discount_amount'],
+			'items': ['base_price_list_rate','base_amount','base_rate', 'base_net_rate', 'base_net_amount']
 		},
 		'Supplier Quotation': {
-			'fields':['conversion_rate','currency']
+			'fields': ['conversion_rate', 'currency','base_grand_total', 'base_in_words', 'base_total',
+			 	'base_net_total', 'base_taxes_and_charges_added', 'base_taxes_and_charges_deducted',
+				'base_total_taxes_and_charges', 'base_discount_amount'],
+			'items': ['base_price_list_rate','base_amount','base_rate', 'base_net_rate', 'base_net_amount']
 		}
 	},
 
@@ -154,7 +177,7 @@ pscript.feature_dict = {
 		'Sales Order': {'fields':['sales_team']}
 	},
 	'fs_more_info': {
-		"Customer Issue": {"fields": ["more_info"]},
+		"Warranty Claim": {"fields": ["more_info"]},
 		'Material Request': {'fields':['more_info']},
 		'Lead': {'fields':['more_info']},
 		'Opportunity': {'fields':['more_info']},
@@ -183,15 +206,16 @@ pscript.feature_dict = {
 }
 
 $(document).bind('form_refresh', function() {
+	var feature_dict = erpnext.feature_setup.feature_dict;
 	for(var sys_feat in sys_defaults) {
 		if(sys_defaults[sys_feat]=='0'
-			&& (sys_feat in pscript.feature_dict)) { //"Features to hide" exists
-			if(cur_frm.doc.doctype in pscript.feature_dict[sys_feat]) {
-				for(var fort in pscript.feature_dict[sys_feat][cur_frm.doc.doctype]) {
+			&& (sys_feat in feature_dict)) { //"Features to hide" exists
+			if(cur_frm.doc.doctype in feature_dict[sys_feat]) {
+				for(var fort in feature_dict[sys_feat][cur_frm.doc.doctype]) {
 					if(fort=='fields') {
-						hide_field(pscript.feature_dict[sys_feat][cur_frm.doc.doctype][fort]);
+						hide_field(feature_dict[sys_feat][cur_frm.doc.doctype][fort]);
 					} else if(cur_frm.fields_dict[fort]) {
-						cur_frm.fields_dict[fort].grid.set_column_disp(pscript.feature_dict[sys_feat][cur_frm.doc.doctype][fort], false);
+						cur_frm.fields_dict[fort].grid.set_column_disp(feature_dict[sys_feat][cur_frm.doc.doctype][fort], false);
 					} else {
 						msgprint(__('Grid "')+fort+__('" does not exists'));
 					}

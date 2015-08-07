@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from frappe import _
 
 def get_data():
@@ -82,6 +83,11 @@ def get_data():
 					"name": "Stock UOM Replace Utility",
 					"description": _("Change UOM for an Item."),
 				},
+				{
+					"type": "doctype",
+					"name": "Manage Variants",
+					"description": _("Manage Item Variants."),
+				},
 			]
 		},
 		{
@@ -144,13 +150,13 @@ def get_data():
 					"type": "report",
 					"is_query_report": True,
 					"name": "Stock Ledger",
-					"doctype": "Item",
+					"doctype": "Stock Ledger Entry",
 				},
 				{
 					"type": "report",
 					"is_query_report": True,
 					"name": "Stock Balance",
-					"doctype": "Warehouse"
+					"doctype": "Stock Ledger Entry"
 				},
 				{
 					"type": "report",
@@ -253,4 +259,25 @@ def get_data():
 				},
 			]
 		},
+		{
+			"label": _("Help"),
+			"icon": "icon-facetime-video",
+			"items": [
+				{
+					"type": "help",
+					"label": _("Items and Pricing"),
+					"youtube_id": "qXaEwld4_Ps"
+				},
+				{
+					"type": "help",
+					"label": _("Opening Stock Balance"),
+					"youtube_id": "0yPgrtfeCTs"
+				},
+				{
+					"type": "help",
+					"label": _("Item Variants"),
+					"youtube_id": "OGBETlCzU5o"
+				},
+			]
+		}
 	]

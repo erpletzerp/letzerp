@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from frappe import _
 from frappe.desk.moduleview import add_setup_section
 
@@ -43,6 +44,36 @@ def get_data():
 			]
 		},
 		{
+			"label": _("Help"),
+			"items": [
+				{
+					"type": "help",
+					"name": _("Data Import and Export"),
+					"youtube_id": "6wiriRKPhmg"
+				},
+				{
+					"type": "help",
+					"label": _("Setting up Email"),
+					"youtube_id": "YFYe0DrB95o"
+				},
+				{
+					"type": "help",
+					"label": _("Printing and Branding"),
+					"youtube_id": "cKZHcx1znMc"
+				},
+				{
+					"type": "help",
+					"label": _("Users and Permissions"),
+					"youtube_id": "fnBoRhBrwR4"
+				},
+				{
+					"type": "help",
+					"label": _("Workflow"),
+					"youtube_id": "yObJUg9FxFs"
+				},
+			]
+		},
+		{
 			"label": _("Customize"),
 			"icon": "icon-glass",
 			"items": [
@@ -79,43 +110,7 @@ def get_data():
 					"description": _("Setup SMS gateway settings")
 				},
 			]
-		},
-		{
-			"label": _("Masters"),
-			"icon": "icon-star",
-			"items": [
-				{
-					"type": "doctype",
-					"name": "Company",
-					"description": _("Company (not Customer or Supplier) master.")
-				},
-				{
-					"type": "doctype",
-					"name": "Item",
-					"description": _("Item master.")
-				},
-				{
-					"type": "doctype",
-					"name": "Customer",
-					"description": _("Customer master.")
-				},
-				{
-					"type": "doctype",
-					"name": "Supplier",
-					"description": _("Supplier master.")
-				},
-				{
-					"type": "doctype",
-					"name": "Contact",
-					"description": _("Contact master.")
-				},
-				{
-					"type": "doctype",
-					"name": "Address",
-					"description": _("Address master.")
-				},
-			]
-		},
+		}
 	]
 
 	for module, label, icon in (

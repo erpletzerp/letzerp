@@ -1,7 +1,7 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.pages['sales-analytics'].onload = function(wrapper) {
+frappe.pages['sales-analytics'].on_page_load = function(wrapper) {
 	frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __('Sales Analytics'),
@@ -10,9 +10,9 @@ frappe.pages['sales-analytics'].onload = function(wrapper) {
 	new erpnext.SalesAnalytics(wrapper);
 
 
-	frappe.add_breadcrumbs("Selling")
+	frappe.breadcrumbs.add("Selling")
 
-}
+};
 
 erpnext.SalesAnalytics = frappe.views.TreeGridReport.extend({
 	init: function(wrapper) {
@@ -202,7 +202,7 @@ erpnext.SalesAnalytics = frappe.views.TreeGridReport.extend({
 				if (posting_date >= from_date && posting_date <= to_date) {
 					var item = me.item_by_name[tl[me.tree_grid.item_key]] ||
 						me.item_by_name['Not Set'];
-					item[me.column_map[tl.posting_date].field] += (is_val ? tl.base_amount : tl.qty);
+					item[me.column_map[tl.posting_date].field] += (is_val ? tl.base_net_amount : tl.qty);
 				}
 			}
 		});

@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -18,11 +18,11 @@ def get_fiscal_year(date=None, fiscal_year=None, label="Date", verbose=1, compan
 
 def get_fiscal_years(transaction_date=None, fiscal_year=None, label="Date", verbose=1, company=None):
 	# if year start date is 2012-04-01, year end date should be 2013-03-31 (hence subdate)
-	cond = ""
+	cond = " ifnull(disabled, 0) = 0"
 	if fiscal_year:
-		cond = "fy.name = %(fiscal_year)s"
+		cond += " and fy.name = %(fiscal_year)s"
 	else:
-		cond = "%(transaction_date)s >= fy.year_start_date and %(transaction_date)s <= fy.year_end_date"
+		cond += " and %(transaction_date)s >= fy.year_start_date and %(transaction_date)s <= fy.year_end_date"
 
 	if company:
 		cond += """ and (not exists(select name from `tabFiscal Year Company` fyc where fyc.parent = fy.name)
@@ -36,15 +36,18 @@ def get_fiscal_years(transaction_date=None, fiscal_year=None, label="Date", verb
 		})
 
 	if not fy:
-		error_msg = _("""{0} {1} not in any Fiscal Year. For more details check {2}.""").format(label, formatdate(transaction_date), "https://erpnext.com/kb/accounts/fiscal-year-error")
+		error_msg = _("""{0} {1} not in any active Fiscal Year. For more details check {2}.""").format(label, formatdate(transaction_date), "https://erpnext.com/kb/accounts/fiscal-year-error")
 		if verbose==1: frappe.msgprint(error_msg)
 		raise FiscalYearError, error_msg
 	return fy
 
-def validate_fiscal_year(date, fiscal_year, label="Date"):
+def validate_fiscal_year(date, fiscal_year, label=_("Date"), doc=None):
 	years = [f[0] for f in get_fiscal_years(date, label=label)]
 	if fiscal_year not in years:
-		throw(_("{0} '{1}' not in Fiscal Year {2}").format(label, formatdate(date), fiscal_year))
+		if doc:
+			doc.fiscal_year = years[0]
+		else:
+			throw(_("{0} '{1}' not in Fiscal Year {2}").format(label, formatdate(date), fiscal_year))
 
 @frappe.whitelist()
 def get_balance_on(account=None, date=None, party_type=None, party=None):
@@ -86,9 +89,9 @@ def get_balance_on(account=None, date=None, party_type=None, party=None):
 				% year_start_date)
 
 		# different filter for group and ledger - improved performance
-		if acc.group_or_ledger=="Group":
+		if acc.is_group:
 			cond.append("""exists (
-				select * from `tabAccount` ac where ac.name = gle.account
+				select name from `tabAccount` ac where ac.name = gle.account
 				and ac.lft >= %s and ac.rgt <= %s
 			)""" % (acc.lft, acc.rgt))
 		else:
@@ -209,7 +212,7 @@ def update_against_doc(d, jv_obj):
 		ch.docstatus = 1
 
 	# will work as update after submit
-	jv_obj.ignore_validate_update_after_submit = True
+	jv_obj.flags.ignore_validate_update_after_submit = True
 	jv_obj.save()
 
 def remove_against_link_from_jv(ref_type, ref_no, against_field):
@@ -335,18 +338,18 @@ def get_actual_expense(args):
 	args["condition"] = " and posting_date<='%s'" % args.month_end_date \
 		if args.get("month_end_date") else ""
 
-	return frappe.db.sql("""
+	return flt(frappe.db.sql("""
 		select sum(ifnull(debit, 0)) - sum(ifnull(credit, 0))
 		from `tabGL Entry`
 		where account='%(account)s' and cost_center='%(cost_center)s'
 		and fiscal_year='%(fiscal_year)s' and company='%(company)s' %(condition)s
-	""" % (args))[0][0]
+	""" % (args))[0][0])
 
 def get_currency_precision(currency=None):
 	if not currency:
 		currency = frappe.db.get_value("Company",
-			frappe.db.get_default("company"), "default_currency")
-	currency_format = frappe.db.get_value("Currency", currency, "number_format")
+			frappe.db.get_default("company"), "default_currency", cache=True)
+	currency_format = frappe.db.get_value("Currency", currency, "number_format", cache=True)
 
 	from frappe.utils import get_number_format_info
 	return get_number_format_info(currency_format)[2]
@@ -394,7 +397,7 @@ def get_outstanding_invoices(amount_query, account, party_type, party):
 
 	for d in outstanding_voucher_list:
 		payment_amount = frappe.db.sql("""
-			select ifnull(sum(ifnull({amount_query}, 0)), 0)
+			select ifnull(sum({amount_query}), 0)
 			from
 				`tabGL Entry`
 			where
@@ -405,6 +408,7 @@ def get_outstanding_invoices(amount_query, account, party_type, party):
 			}), (account, party_type, party, d.voucher_type, d.voucher_no))
 
 		payment_amount = -1*payment_amount[0][0] if payment_amount else 0
+		precision = frappe.get_precision("Sales Invoice", "outstanding_amount")
 
 		if d.invoice_amount > payment_amount:
 
@@ -412,13 +416,8 @@ def get_outstanding_invoices(amount_query, account, party_type, party):
 				'voucher_no': d.voucher_no,
 				'voucher_type': d.voucher_type,
 				'posting_date': d.posting_date,
-				'invoice_amount': flt(d.invoice_amount),
-				'outstanding_amount': d.invoice_amount - payment_amount
-				})
+				'invoice_amount': flt(d.invoice_amount, precision),
+				'outstanding_amount': flt(d.invoice_amount - payment_amount, precision)
+			})
 
 	return all_outstanding_vouchers
-
-@frappe.whitelist()
-def get_letter_head(company):
-	return frappe.db.get_value("Company",company,"default_letter_head")
-

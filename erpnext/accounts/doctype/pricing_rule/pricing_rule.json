@@ -72,6 +72,7 @@
    "permlevel": 0
   }, 
   {
+   "depends_on": "eval: doc.buying || doc.selling", 
    "fieldname": "applicable_for", 
    "fieldtype": "Select", 
    "label": "Applicable For", 
@@ -216,7 +217,7 @@
    "depends_on": "eval:doc.price_or_discount==\"Discount Percentage\"", 
    "fieldname": "discount_percentage", 
    "fieldtype": "Float", 
-   "label": "Discount Percentage", 
+   "label": "Discount on Price List Rate (%)", 
    "permlevel": 0
   }, 
   {
@@ -244,7 +245,7 @@
  "icon": "icon-gift", 
  "idx": 1, 
  "istable": 0, 
- "modified": "2015-01-05 10:58:42.550092", 
+ "modified": "2015-05-27 02:47:16.777466", 
  "modified_by": "Administrator", 
  "module": "Accounts", 
  "name": "Pricing Rule", 
@@ -259,6 +260,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Accounts Manager", 
+   "share": 1, 
    "write": 1
   }, 
   {
@@ -271,6 +273,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Sales Manager", 
+   "share": 1, 
    "write": 1
   }, 
   {
@@ -280,6 +283,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Purchase Manager", 
+   "share": 1, 
    "write": 1
   }, 
   {
@@ -289,6 +293,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Website Manager", 
+   "share": 1, 
    "write": 1
   }, 
   {
@@ -300,6 +305,7 @@
    "read": 1, 
    "report": 1, 
    "role": "System Manager", 
+   "share": 1, 
    "write": 1
   }
  ], 

@@ -1,4 +1,4 @@
-/*frappe.listview_settings['Opportunity'] = {
+frappe.listview_settings['Opportunity'] = {
 	add_fields: [ "enquiry_type", "enquiry_from", "status"],
 	get_indicator: function(doc) {
 		var indicator = [__(doc.status), frappe.utils.guess_colour(doc.status), "status,=," + doc.status];
@@ -8,4 +8,4 @@
 		return indicator;
 	}
 };
-*/
+

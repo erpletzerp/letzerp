@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 # For license information, please see license.txt
@@ -8,7 +8,7 @@ import frappe
 from frappe import _, msgprint
 from frappe.utils import comma_and
 from frappe.model.document import Document
-from frappe.utils.nestedset import get_ancestors_of
+from frappe.utils.nestedset import get_ancestors_of, get_root_of
 from erpnext.utilities.doctype.address.address import get_territory_from_address
 
 class ShoppingCartSetupError(frappe.ValidationError): pass
@@ -22,10 +22,6 @@ class ShoppingCartSettings(Document):
 			self.validate_price_lists()
 			self.validate_tax_masters()
 			self.validate_exchange_rates_exist()
-
-	def on_update(self):
-		frappe.db.set_default("shopping_cart_enabled", self.get("enabled") or 0)
-		frappe.db.set_default("shopping_cart_quotation_series", self.get("quotation_series"))
 
 	def validate_overlapping_territories(self, parentfield, fieldname):
 		# for displaying message
@@ -42,7 +38,7 @@ class ShoppingCartSettings(Document):
 		return territory_name_map
 
 	def validate_price_lists(self):
-		territory_name_map = self.validate_overlapping_territories("price_lists", "selling_price_list")
+		self.validate_overlapping_territories("price_lists", "selling_price_list")
 
 		# validate that a Shopping Cart Price List exists for the default territory as a catch all!
 		price_list_for_default_territory = self.get_name_from_territory(self.default_territory, "price_lists",
@@ -130,6 +126,10 @@ class ShoppingCartSettings(Document):
 
 	def get_price_list(self, billing_territory):
 		price_list = self.get_name_from_territory(billing_territory, "price_lists", "selling_price_list")
+		if not (price_list and price_list[0]):
+			price_list = self.get_name_from_territory(self.default_territory or get_root_of("Territory"),
+				"price_lists", "selling_price_list")
+
 		return price_list and price_list[0] or None
 
 	def get_tax_master(self, billing_territory):
@@ -158,10 +158,13 @@ def get_shopping_cart_settings():
 
 	return frappe.local.shopping_cart_settings
 
-def get_default_territory():
-	return get_shopping_cart_settings().default_territory
+def is_cart_enabled():
+	return get_shopping_cart_settings().enabled
 
-def is_shopping_cart_enabled():
+def get_default_territory():
+	return get_shopping_cart_settings().default_territory or get_root_of("Territory")
+
+def check_shopping_cart_enabled():
 	if not get_shopping_cart_settings().enabled:
 		frappe.throw(_("You need to enable Shopping Cart"), ShoppingCartSetupError)
 

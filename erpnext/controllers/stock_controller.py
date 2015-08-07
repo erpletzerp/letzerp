@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -9,6 +9,8 @@ import frappe.defaults
 
 from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.accounts.general_ledger import make_gl_entries, delete_gl_entries, process_gl_map
+from erpnext.stock.utils import update_bin
+
 
 class StockController(AccountsController):
 	def make_gl_entries(self, repost_future_gle=True):
@@ -197,9 +199,10 @@ class StockController(AccountsController):
 		sl_dict.update(args)
 		return sl_dict
 
-	def make_sl_entries(self, sl_entries, is_amended=None):
+	def make_sl_entries(self, sl_entries, is_amended=None, allow_negative_stock=False,
+			via_landed_cost_voucher=False):
 		from erpnext.stock.stock_ledger import make_sl_entries
-		make_sl_entries(sl_entries, is_amended)
+		make_sl_entries(sl_entries, is_amended, allow_negative_stock, via_landed_cost_voucher)
 
 	def make_gl_entries_on_cancel(self):
 		if frappe.db.sql("""select name from `tabGL Entry` where voucher_type=%s
@@ -211,10 +214,38 @@ class StockController(AccountsController):
 		item_codes = list(set([d.item_code for d in self.get("items")]))
 		if item_codes:
 			serialized_items = frappe.db.sql_list("""select name from `tabItem`
-				where has_serial_no='Yes' and name in ({})""".format(", ".join(["%s"]*len(item_codes))),
+				where has_serial_no=1 and name in ({})""".format(", ".join(["%s"]*len(item_codes))),
 				tuple(item_codes))
 
 		return serialized_items
+
+	def get_incoming_rate_for_sales_return(self, item_code, against_document):
+		incoming_rate = 0.0
+		if against_document and item_code:
+			incoming_rate = frappe.db.sql("""select abs(ifnull(stock_value_difference, 0) / actual_qty)
+				from `tabStock Ledger Entry`
+				where voucher_type = %s and voucher_no = %s and item_code = %s limit 1""",
+				(self.doctype, against_document, item_code))
+			incoming_rate = incoming_rate[0][0] if incoming_rate else 0.0
+
+		return incoming_rate
+
+	def update_reserved_qty(self, d):
+		if d['reserved_qty'] < 0 :
+			# Reduce reserved qty from reserved warehouse mentioned in so
+			if not d["reserved_warehouse"]:
+				frappe.throw(_("Delivery Warehouse is missing in Sales Order"))
+
+			args = {
+				"item_code": d['item_code'],
+				"warehouse": d["reserved_warehouse"],
+				"voucher_type": self.doctype,
+				"voucher_no": self.name,
+				"reserved_qty": (self.docstatus==1 and 1 or -1)*flt(d['reserved_qty']),
+				"posting_date": self.posting_date,
+				"is_amended": self.amended_from and 'Yes' or 'No'
+			}
+			update_bin(args)
 
 def update_gl_entries_after(posting_date, posting_time, for_warehouses=None, for_items=None,
 		warehouse_account=None):

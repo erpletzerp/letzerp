@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -18,17 +18,17 @@ class CForm(Document):
 					`tabSales Invoice` where name = %s and docstatus = 1""", d.invoice_no)
 
 				if inv and inv[0][0] != 'Yes':
-					frappe.throw("C-form is not applicable for Invoice: %s" % d.invoice_no)
+					frappe.throw("C-form is not applicable for Invoice: {0}".format(d.invoice_no))
 
 				elif inv and inv[0][1] and inv[0][1] != self.name:
-					frappe.throw("""Invoice %s is tagged in another C-form: %s.
+					frappe.throw("""Invoice {0} is tagged in another C-form: {1}.
 						If you want to change C-form no for this invoice,
-						please remove invoice no from the previous c-form and then try again""" %
-						(d.invoice_no, inv[0][1]))
+						please remove invoice no from the previous c-form and then try again"""\
+						.format(d.invoice_no, inv[0][1]))
 
 				elif not inv:
-					frappe.throw("Row %s: Invoice %s is invalid, it might be cancelled / does not exist. \
-						Please enter a valid Invoice" % d.idx, d.invoice_no)
+					frappe.throw("Row {0}: Invoice {1} is invalid, it might be cancelled / does not exist. \
+						Please enter a valid Invoice".format(d.idx, d.invoice_no))
 
 	def on_update(self):
 		"""	Update C-Form No on invoices"""
@@ -61,10 +61,10 @@ class CForm(Document):
 		"""	Pull details from invoices for referrence """
 		if invoice_no:
 			inv = frappe.db.get_value("Sales Invoice", invoice_no,
-				["posting_date", "territory", "net_total", "grand_total"], as_dict=True)
+				["posting_date", "territory", "base_net_total", "base_grand_total"], as_dict=True)
 			return {
 				'invoice_date' : inv.posting_date,
 				'territory'    : inv.territory,
-				'net_total'    : inv.net_total,
-				'grand_total'  : inv.grand_total
+				'net_total'    : inv.base_net_total,
+				'grand_total'  : inv.base_grand_total
 			}

@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 
@@ -80,7 +80,7 @@ class TestLandedCostVoucher(unittest.TestCase):
 			"purchase_receipt": pr.name,
 			"supplier": pr.supplier,
 			"posting_date": pr.posting_date,
-			"grand_total": pr.grand_total
+			"grand_total": pr.base_grand_total
 		}])
 		lcv.set("taxes", [{
 			"description": "Insurance Charges",

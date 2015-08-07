@@ -1,8 +1,9 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
 import frappe
+import json
 import frappe.utils
 from frappe.utils import cstr, flt, getdate, comma_and
 from frappe import _
@@ -13,6 +14,8 @@ from erpnext.controllers.selling_controller import SellingController
 form_grid_templates = {
 	"items": "templates/form_grid/item_grid.html"
 }
+
+class WarehouseRequired(frappe.ValidationError): pass
 
 class SalesOrder(SellingController):
 	def validate_mandatory(self):
@@ -34,25 +37,15 @@ class SalesOrder(SellingController):
 				frappe.msgprint(_("Warning: Sales Order {0} already exists against same Purchase Order number").format(so[0][0]))
 
 	def validate_for_items(self):
-		check_list, flag = [], 0
-		chk_dupl_itm = []
+		check_list = []
 		for d in self.get('items'):
-			e = [d.item_code, d.description, d.warehouse, d.prevdoc_docname or '']
-			f = [d.item_code, d.description]
+			check_list.append(cstr(d.item_code))
 
-			if frappe.db.get_value("Item", d.item_code, "is_stock_item") == 'Yes':
-				if not d.warehouse:
-					frappe.throw(_("Reserved warehouse required for stock item {0}").format(d.item_code))
-
-				if e in check_list:
-					frappe.throw(_("Item {0} has been entered twice").format(d.item_code))
-				else:
-					check_list.append(e)
-			else:
-				if f in chk_dupl_itm:
-					frappe.throw(_("Item {0} has been entered twice").format(d.item_code))
-				else:
-					chk_dupl_itm.append(f)
+			if (frappe.db.get_value("Item", d.item_code, "is_stock_item")==1 or
+				(self.has_product_bundle(d.item_code) and self.product_bundle_has_stock_item(d.item_code))) \
+				and not d.warehouse:
+				frappe.throw(_("Delivery warehouse required for stock item {0}").format(d.item_code),
+					WarehouseRequired)
 
 			# used for production plan
 			d.transaction_date = self.transaction_date
@@ -60,6 +53,15 @@ class SalesOrder(SellingController):
 			tot_avail_qty = frappe.db.sql("select projected_qty from `tabBin` \
 				where item_code = %s and warehouse = %s", (d.item_code,d.warehouse))
 			d.projected_qty = tot_avail_qty and flt(tot_avail_qty[0][0]) or 0
+		unique_chk_list = set(check_list)
+		if len(unique_chk_list) != len(check_list):
+			frappe.msgprint(_("Warning: Same item has been entered multiple times."))
+
+	def product_bundle_has_stock_item(self, product_bundle):
+		"""Returns true if product bundle has stock item"""
+		ret = len(frappe.db.sql("""select i.name from tabItem i, `tabProduct Bundle Item` pbi
+			where pbi.parent = %s and pbi.item_code = i.name and i.is_stock_item = 1""", product_bundle))
+		return ret
 
 	def validate_sales_mntc_quotation(self):
 		for d in self.get('items'):
@@ -105,7 +107,7 @@ class SalesOrder(SellingController):
 		if not self.status:
 			self.status = "Draft"
 
-		from erpnext.utilities import validate_status
+		from erpnext.controllers.status_updater import validate_status
 		validate_status(self.status, ["Draft", "Submitted", "Stopped",
 			"Cancelled"])
 
@@ -143,6 +145,7 @@ class SalesOrder(SellingController):
 					frappe.throw(_("Quotation {0} is cancelled").format(quotation))
 
 				doc.set_status(update=True)
+				doc.update_opportunity()
 
 	def on_submit(self):
 		super(SalesOrder, self).on_submit()
@@ -150,7 +153,7 @@ class SalesOrder(SellingController):
 		self.check_credit_limit()
 		self.update_stock_ledger(update_stock = 1)
 
-		frappe.get_doc('Authorization Control').validate_approving_authority(self.doctype, self.grand_total, self)
+		frappe.get_doc('Authorization Control').validate_approving_authority(self.doctype, self.base_grand_total, self)
 
 		self.update_prevdoc_status('submit')
 		frappe.db.set(self, 'status', 'Submitted')
@@ -224,7 +227,7 @@ class SalesOrder(SellingController):
 	def update_stock_ledger(self, update_stock):
 		from erpnext.stock.utils import update_bin
 		for d in self.get_item_list():
-			if frappe.db.get_value("Item", d['item_code'], "is_stock_item") == "Yes":
+			if frappe.db.get_value("Item", d['item_code'], "is_stock_item")==1:
 				args = {
 					"item_code": d['item_code'],
 					"warehouse": d['reserved_warehouse'],
@@ -239,13 +242,49 @@ class SalesOrder(SellingController):
 	def on_update(self):
 		pass
 
-	def get_portal_page(self):
-		return "order" if self.docstatus==1 else None
+def get_list_context(context=None):
+	from erpnext.controllers.website_list_for_contact import get_list_context
+	list_context = get_list_context(context)
+	list_context["title"] = _("My Orders")
+	return list_context
+
+@frappe.whitelist()
+def stop_or_unstop_sales_orders(names, status):
+	if not frappe.has_permission("Sales Order", "write"):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	names = json.loads(names)
+	for name in names:
+		so = frappe.get_doc("Sales Order", name)
+		if so.docstatus == 1:
+			if status=="Stop":
+				if so.status not in ("Stopped", "Cancelled") and (so.per_delivered < 100 or so.per_billed < 100):
+					so.stop_sales_order()
+			else:
+				if so.status == "Stopped":
+					so.unstop_sales_order()
+
+	frappe.local.message_log = []
+
+	def before_recurring(self):
+		super(SalesOrder, self).before_recurring()
+
+		for field in ("delivery_status", "per_delivered", "billing_status", "per_billed"):
+			self.set(field, None)
+
+		for d in self.get("items"):
+			for field in ("delivered_qty", "billed_amt", "planned_qty", "prevdoc_docname"):
+				d.set(field, None)
+
 
 @frappe.whitelist()
 def make_material_request(source_name, target_doc=None):
 	def postprocess(source, doc):
 		doc.material_request_type = "Purchase"
+
+	so = frappe.get_doc("Sales Order", source_name)
+
+	item_table = "Packed Item" if so.packed_items else "Sales Order Item"
 
 	doc = get_mapped_doc("Sales Order", source_name, {
 		"Sales Order": {
@@ -254,7 +293,7 @@ def make_material_request(source_name, target_doc=None):
 				"docstatus": ["=", 1]
 			}
 		},
-		"Sales Order Item": {
+		item_table: {
 			"doctype": "Material Request Item",
 			"field_map": {
 				"parent": "sales_order_no",

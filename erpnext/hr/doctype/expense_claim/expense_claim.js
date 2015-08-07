@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 frappe.provide("erpnext.hr");
@@ -19,10 +19,13 @@ erpnext.hr.ExpenseClaimController = frappe.ui.form.Controller.extend({
 				jv.company = cur_frm.doc.company;
 				jv.remark = 'Payment against Expense Claim: ' + cur_frm.doc.name;
 				jv.fiscal_year = cur_frm.doc.fiscal_year;
-
-				var d1 = frappe.model.add_child(jv, 'Journal Entry Account', 'accounts');
-				d1.debit = cur_frm.doc.total_sanctioned_amount;
-				d1.against_expense_claim = cur_frm.doc.name;
+				var expense = cur_frm.doc.expenses || [];
+				for(var i = 0; i < expense.length; i++){
+					var d1 = frappe.model.add_child(jv, 'Journal Entry Account', 'accounts');
+					d1.debit = expense[i].sanctioned_amount;
+					d1.account = expense[i].default_account;
+					d1.against_expense_claim = cur_frm.doc.name;
+				}
 
 				// credit to bank
 				var d1 = frappe.model.add_child(jv, 'Journal Entry Account', 'accounts');
@@ -43,6 +46,7 @@ $.extend(cur_frm.cscript, new erpnext.hr.ExpenseClaimController({frm: cur_frm}))
 
 cur_frm.add_fetch('employee', 'company', 'company');
 cur_frm.add_fetch('employee','employee_name','employee_name');
+cur_frm.add_fetch('expense_type', 'default_account', 'default_account');
 
 cur_frm.cscript.onload = function(doc,cdt,cdn) {
 	if(!doc.approval_status)
@@ -63,7 +67,7 @@ cur_frm.cscript.onload = function(doc,cdt,cdn) {
 
 	cur_frm.set_query("exp_approver", function() {
 		return {
-			filters: [["UserRole", "role", "=", "Expense Approver"]]
+			query: "erpnext.hr.doctype.expense_claim.expense_claim.get_expense_approver"
 		};
 	});
 }
@@ -133,12 +137,14 @@ cur_frm.cscript.calculate_total = function(doc,cdt,cdn){
 cur_frm.cscript.calculate_total_amount = function(doc,cdt,cdn){
 	cur_frm.cscript.calculate_total(doc,cdt,cdn);
 }
+
 cur_frm.cscript.claim_amount = function(doc,cdt,cdn){
 	cur_frm.cscript.calculate_total(doc,cdt,cdn);
 
 	var child = locals[cdt][cdn];
 	refresh_field("sanctioned_amount", child.name, child.parentfield);
 }
+
 cur_frm.cscript.sanctioned_amount = function(doc,cdt,cdn){
 	cur_frm.cscript.calculate_total(doc,cdt,cdn);
 }
@@ -147,4 +153,31 @@ cur_frm.cscript.on_submit = function(doc, cdt, cdn) {
 	if(cint(frappe.boot.notification_settings && frappe.boot.notification_settings.expense_claim)) {
 		cur_frm.email_doc(frappe.boot.notification_settings.expense_claim_message);
 	}
+}
+
+erpnext.expense_claim = {
+	set_title :function(frm) {
+		if (!frm.doc.task) {
+			frm.set_value("title", frm.doc.employee_name);
+		}
+		else {
+			frm.set_value("title", frm.doc.employee_name + " for "+ frm.doc.task);
+		}
+	}
+}
+
+frappe.ui.form.on("Expense Claim", "employee_name", function(frm) {
+	erpnext.expense_claim.set_title(frm);
+});
+
+frappe.ui.form.on("Expense Claim", "task", function(frm) {
+	erpnext.expense_claim.set_title(frm);
+});
+
+cur_frm.fields_dict['task'].get_query = function(doc) {
+	return {
+		filters:{
+			'project': doc.project
+		}
+	}	
 }

@@ -1,11 +1,15 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
 import frappe
-from frappe.utils import flt
+from frappe.utils import flt, comma_or
 from frappe import msgprint, _, throw
 from frappe.model.document import Document
+
+def validate_status(status, options):
+	if status not in options:
+		frappe.throw(_("Status must be one of {0}").format(comma_or(options)))
 
 status_map = {
 	"Lead": [
@@ -13,11 +17,9 @@ status_map = {
 		["Opportunity", "has_opportunity"],
 	],
 	"Opportunity": [
-		["Draft", None],
-		["Submitted", "eval:self.docstatus==1"],
 		["Lost", "eval:self.status=='Lost'"],
 		["Quotation", "has_quotation"],
-		["Cancelled", "eval:self.docstatus==2"],
+		["Converted", "has_ordered_quotation"]
 	],
 	"Quotation": [
 		["Draft", None],
@@ -32,6 +34,16 @@ status_map = {
 		["Stopped", "eval:self.status=='Stopped'"],
 		["Cancelled", "eval:self.docstatus==2"],
 	],
+	"Delivery Note": [
+		["Draft", None],
+		["Submitted", "eval:self.docstatus==1"],
+		["Cancelled", "eval:self.docstatus==2"],
+	],
+	"Purchase Receipt": [
+		["Draft", None],
+		["Submitted", "eval:self.docstatus==1"],
+		["Cancelled", "eval:self.docstatus==2"],
+	]
 }
 
 class StatusUpdater(Document):
@@ -66,7 +78,7 @@ class StatusUpdater(Document):
 					self.status = s[0]
 					break
 
-			if self.status != _status:
+			if self.status != _status and self.status not in ("Submitted", "Cancelled"):
 				self.add_comment("Label", _(self.status))
 
 			if update:
@@ -195,7 +207,7 @@ class StatusUpdater(Document):
 		ref_fieldname = ref_dt.lower().replace(" ", "_")
 		zero_amount_refdoc = []
 		all_zero_amount_refdoc = frappe.db.sql_list("""select name from `tab%s`
-			where docstatus=1 and net_total = 0""" % ref_dt)
+			where docstatus=1 and base_net_total = 0""" % ref_dt)
 
 		for item in self.get("items"):
 			if item.get(ref_fieldname) \

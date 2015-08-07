@@ -1,8 +1,7 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 {% include 'selling/sales_common.js' %}
-{% include 'accounts/doctype/sales_taxes_and_charges_master/sales_taxes_and_charges_master.js' %}
 
 erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend({
 	refresh: function(doc, dt, dn) {
@@ -12,45 +11,38 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 		if(doc.docstatus==1) {
 			if(doc.status != 'Stopped') {
 
-				cur_frm.dashboard.add_progress(cint(doc.per_delivered) + __("% Delivered"),
-					doc.per_delivered);
-				cur_frm.dashboard.add_progress(cint(doc.per_billed) + __("% Billed"),
-					doc.per_billed);
+				// cur_frm.dashboard.add_progress(cint(doc.per_delivered) + __("% Delivered"),
+				// 	doc.per_delivered);
+				// cur_frm.dashboard.add_progress(cint(doc.per_billed) + __("% Billed"),
+				// 	doc.per_billed);
 
 				// delivery note
 				if(flt(doc.per_delivered, 2) < 100 && ["Sales", "Shopping Cart"].indexOf(doc.order_type)!==-1)
-					cur_frm.add_custom_button(__('Make Delivery'), this.make_delivery_note, "icon-truck");
+					cur_frm.add_custom_button(__('Make Delivery'), this.make_delivery_note);
 
 				// indent
 				if(!doc.order_type || ["Sales", "Shopping Cart"].indexOf(doc.order_type)!==-1)
 					cur_frm.add_custom_button(__('Make ') + __('Material Request'),
-						this.make_material_request, "icon-ticket");
+						this.make_material_request);
 
 				// sales invoice
 				if(flt(doc.per_billed, 2) < 100) {
-					cur_frm.add_custom_button(__('Make Invoice'), this.make_sales_invoice,
-						frappe.boot.doctype_icons["Sales Invoice"]);
+					cur_frm.add_custom_button(__('Make Invoice'), this.make_sales_invoice);
 				}
 
 				// stop
 				if(flt(doc.per_delivered, 2) < 100 || doc.per_billed < 100)
-					cur_frm.add_custom_button(__('Stop'), cur_frm.cscript['Stop Sales Order'],
-						"icon-exclamation", "btn-default")
+					cur_frm.add_custom_button(__('Stop'), cur_frm.cscript['Stop Sales Order'])
 
 						// maintenance
 						if(flt(doc.per_delivered, 2) < 100 && ["Sales", "Shopping Cart"].indexOf(doc.order_type)===-1) {
-							cur_frm.add_custom_button(__('Make Maint. Visit'),
-								this.make_maintenance_visit, null, "btn-default");
-							cur_frm.add_custom_button(__('Make Maint. Schedule'),
-								this.make_maintenance_schedule, null, "btn-default");
+							cur_frm.add_custom_button(__('Make Maint. Visit'), this.make_maintenance_visit);
+							cur_frm.add_custom_button(__('Make Maint. Schedule'), this.make_maintenance_schedule);
 						}
-
-				cur_frm.add_custom_button(__('Send SMS'), cur_frm.cscript.send_sms, "icon-mobile-phone", true);
 
 			} else {
 				// un-stop
-				cur_frm.dashboard.set_headline_alert(__("Stopped"), "alert-danger", "icon-stop");
-				cur_frm.add_custom_button(__('Unstop'), cur_frm.cscript['Unstop Sales Order'], "icon-check");
+				cur_frm.add_custom_button(__('Unstop'), cur_frm.cscript['Unstop Sales Order']);
 			}
 		}
 
@@ -68,7 +60,7 @@ erpnext.selling.SalesOrderController = erpnext.selling.SellingController.extend(
 							company: cur_frm.doc.company
 						}
 					})
-				}, "icon-download", "btn-default");
+				});
 		}
 
 		this.order_type(doc);
@@ -185,9 +177,4 @@ cur_frm.cscript.on_submit = function(doc, cdt, cdn) {
 	if(cint(frappe.boot.notification_settings.sales_order)) {
 		cur_frm.email_doc(frappe.boot.notification_settings.sales_order_message);
 	}
-};
-
-cur_frm.cscript.send_sms = function() {
-	frappe.require("assets/erpnext/js/sms_manager.js");
-	var sms_man = new SMSManager(cur_frm.doc);
 };

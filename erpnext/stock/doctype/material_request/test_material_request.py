@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 # ERPNext - web based ERP (http://erpnext.com)
@@ -216,7 +216,7 @@ class TestMaterialRequest(unittest.TestCase):
 
 		mr.update_status('Submitted')
 
-		se.ignore_validate_update_after_submit = True
+		se.flags.ignore_validate_update_after_submit = True
 		se.submit()
 		mr.update_status('Stopped')
 		self.assertRaises(frappe.InvalidStatusError, se.cancel)

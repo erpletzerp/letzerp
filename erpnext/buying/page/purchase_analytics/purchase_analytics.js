@@ -1,7 +1,7 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.pages['purchase-analytics'].onload = function(wrapper) {
+frappe.pages['purchase-analytics'].on_page_load = function(wrapper) {
 	frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __('Purchase Analytics'),
@@ -11,8 +11,7 @@ frappe.pages['purchase-analytics'].onload = function(wrapper) {
 	new erpnext.PurchaseAnalytics(wrapper);
 
 
-	frappe.add_breadcrumbs("Buying")
-
+	frappe.breadcrumbs.add("Buying");
 }
 
 erpnext.PurchaseAnalytics = frappe.views.TreeGridReport.extend({
@@ -74,7 +73,7 @@ erpnext.PurchaseAnalytics = frappe.views.TreeGridReport.extend({
 		this.tree_grid = this.tree_grids[this.tree_type];
 
 		var std_columns = [
-			{id: "check", name: __("Plot"), field: "check", width: 30,
+			{id: "_check", name: __("Plot"), field: "_check", width: 30,
 				formatter: this.check_formatter},
 			{id: "name", name: this.tree_grid.label, field: "name", width: 300,
 				formatter: this.tree_formatter},
@@ -208,7 +207,7 @@ erpnext.PurchaseAnalytics = frappe.views.TreeGridReport.extend({
 				if (posting_date >= from_date && posting_date <= to_date) {
 					var item = me.item_by_name[tl[me.tree_grid.item_key]] ||
 						me.item_by_name['Not Set'];
-					item[me.column_map[tl.posting_date].field] += (is_val ? tl.base_amount : tl.qty);
+					item[me.column_map[tl.posting_date].field] += (is_val ? tl.base_net_amount : tl.qty);
 				}
 			}
 		});

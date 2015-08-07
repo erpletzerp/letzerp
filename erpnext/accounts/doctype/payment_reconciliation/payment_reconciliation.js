@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // For license information, please see license.txt
 
 frappe.provide("erpnext.accounts");
@@ -22,7 +22,7 @@ erpnext.accounts.PaymentReconciliationController = frappe.ui.form.Controller.ext
 				return{
 					filters: {
 						"company": me.frm.doc.company,
-						"group_or_ledger": "Ledger",
+						"is_group": 0,
 						"account_type": (me.frm.doc.party_type == "Customer" ? "Receivable" : "Payable")
 					}
 				};
@@ -37,12 +37,16 @@ erpnext.accounts.PaymentReconciliationController = frappe.ui.form.Controller.ext
 				return{
 					filters:[
 						['Account', 'company', '=', me.frm.doc.company],
-						['Account', 'group_or_ledger', '=', 'Ledger'],
+						['Account', 'is_group', '=', 0],
 						['Account', 'account_type', 'in', ['Bank', 'Cash']]
 					]
 				};
 			}
 		});
+	},
+	
+	refresh: function() {
+		this.frm.disable_save();
 	},
 
 	party: function() {

@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from frappe import _
 
 def get_data():
@@ -45,6 +46,11 @@ def get_data():
 			"icon": "octicon octicon-tag",
 			"type": "module"
 		},
+		"CRM": {
+			"color": "#EF4DB6",
+			"icon": "octicon octicon-broadcast",
+			"type": "module"
+		},
 		"Stock": {
 			"color": "#f39c12",
 			"icon": "icon-truck",
@@ -56,5 +62,12 @@ def get_data():
 			"icon": "icon-phone",
 			"icon": "octicon octicon-issue-opened",
 			"type": "module"
+		},
+		"Learn": {
+			"color": "#FCB868",
+			"force_show": True,
+			"icon": "icon-facetime-video",
+			"type": "module",
+			"is_help": True
 		}
 	}

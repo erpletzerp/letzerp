@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 
@@ -21,35 +21,37 @@ erpnext.stock.LandedCostVoucher = erpnext.stock.StockController.extend({
 
 		this.frm.add_fetch("purchase_receipt", "supplier", "supplier");
 		this.frm.add_fetch("purchase_receipt", "posting_date", "posting_date");
-		this.frm.add_fetch("purchase_receipt", "grand_total", "grand_total");
+		this.frm.add_fetch("purchase_receipt", "base_grand_total", "grand_total");
 
 	},
 
 	refresh: function() {
-		var help_content = ['<table class="table table-bordered" style="background-color: #f9f9f9;">',
-			'<tr><td>',
-				'<h4><i class="icon-hand-right"></i> ',
-					__('Notes'),
-				':</h4>',
-				'<ul>',
-					'<li>',
-						__("Charges will be distributed proportionately based on item amount"),
-					'</li>',
-					'<li>',
-						__("Remove item if charges is not applicable to that item"),
-					'</li>',
-					'<li>',
-						__("Charges are updated in Purchase Receipt against each item"),
-					'</li>',
-					'<li>',
-						__("Item valuation rate is recalculated considering landed cost voucher amount"),
-					'</li>',
-					'<li>',
-						__("Stock Ledger Entries and GL Entries are reposted for the selected Purchase Receipts"),
-					'</li>',
-				'</ul>',
-			'</td></tr>',
-		'</table>'].join("\n");
+		var help_content = [
+			'<br><br>',
+			'<table class="table table-bordered" style="background-color: #f9f9f9;">',
+				'<tr><td>',
+					'<h4><i class="icon-hand-right"></i> ',
+						__('Notes'),
+					':</h4>',
+					'<ul>',
+						'<li>',
+							__("Charges will be distributed proportionately based on item qty or amount, as per your selection"),
+						'</li>',
+						'<li>',
+							__("Remove item if charges is not applicable to that item"),
+						'</li>',
+						'<li>',
+							__("Charges are updated in Purchase Receipt against each item"),
+						'</li>',
+						'<li>',
+							__("Item valuation rate is recalculated considering landed cost voucher amount"),
+						'</li>',
+						'<li>',
+							__("Stock Ledger Entries and GL Entries are reposted for the selected Purchase Receipts"),
+						'</li>',
+					'</ul>',
+				'</td></tr>',
+			'</table>'].join("\n");
 
 		set_field_options("landed_cost_help", help_content);
 	},

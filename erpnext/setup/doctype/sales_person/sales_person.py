@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -14,6 +14,7 @@ class SalesPerson(NestedSet):
 		for d in self.get('targets') or []:
 			if not flt(d.target_qty) and not flt(d.target_amount):
 				frappe.throw(_("Either target qty or target amount is mandatory."))
+		self.validate_employee_id()
 
 	def on_update(self):
 		super(SalesPerson, self).on_update()
@@ -26,3 +27,9 @@ class SalesPerson(NestedSet):
 				frappe.throw(_("User ID not set for Employee {0}").format(self.employee))
 			else:
 				return frappe.db.get_value("User", user, "email") or user
+
+	def validate_employee_id(self):
+		sales_person = frappe.db.get_value("Sales Person", {"employee": self.employee})
+		
+		if sales_person and sales_person != self.name:
+			frappe.throw(_("Another Sales Person {0} exists with the same Employee id").format(sales_person))

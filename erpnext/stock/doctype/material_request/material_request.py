@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 # ERPNext - web based ERP (http://erpnext.com)
@@ -7,7 +7,7 @@
 from __future__ import unicode_literals
 import frappe
 
-from frappe.utils import cstr, flt
+from frappe.utils import cstr, flt, getdate
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
 
@@ -53,7 +53,7 @@ class MaterialRequest(BuyingController):
 
 	def validate_schedule_date(self):
 		for d in self.get('items'):
-			if d.schedule_date and d.schedule_date < self.transaction_date:
+			if d.schedule_date and getdate(d.schedule_date) < getdate(self.transaction_date):
 				frappe.throw(_("Expected Date cannot be before Material Request Date"))
 
 	# Validate
@@ -67,7 +67,7 @@ class MaterialRequest(BuyingController):
 		if not self.status:
 			self.status = "Draft"
 
-		from erpnext.utilities import validate_status
+		from erpnext.controllers.status_updater import validate_status
 		validate_status(self.status, ["Draft", "Submitted", "Stopped", "Cancelled"])
 
 		self.validate_value("material_request_type", "in", ["Purchase", "Material Transfer", "Material Issue"])
@@ -94,8 +94,8 @@ class MaterialRequest(BuyingController):
 
 	def update_status(self, status):
 		self.check_modified_date()
-		self.update_requested_qty()
 		frappe.db.set(self, 'status', cstr(status))
+		self.update_requested_qty()
 		frappe.msgprint(_("Status updated to {0}").format(_(status)))
 
 	def on_cancel(self):
@@ -152,7 +152,7 @@ class MaterialRequest(BuyingController):
 		item_wh_list = []
 		for d in self.get("items"):
 			if (not mr_item_rows or d.name in mr_item_rows) and [d.item_code, d.warehouse] not in item_wh_list \
-					and frappe.db.get_value("Item", d.item_code, "is_stock_item") == "Yes" and d.warehouse:
+					and frappe.db.get_value("Item", d.item_code, "is_stock_item") == 1 and d.warehouse:
 				item_wh_list.append([d.item_code, d.warehouse])
 
 		for item_code, warehouse in item_wh_list:
@@ -183,6 +183,7 @@ def set_missing_values(source, target_doc):
 def update_item(obj, target, source_parent):
 	target.conversion_factor = 1
 	target.qty = flt(obj.qty) - flt(obj.ordered_qty)
+	target.stock_qty = target.qty
 
 @frappe.whitelist()
 def make_purchase_order(source_name, target_doc=None):

@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -25,7 +25,8 @@ class TestShoppingCart(unittest.TestCase):
 		# test if lead is created and quotation with new lead is fetched
 		quotation = get_quotation()
 		self.assertEquals(quotation.quotation_to, "Lead")
-		self.assertEquals(frappe.db.get_value("Lead", quotation.lead, "email_id"), "test_cart_user@example.com")
+		self.assertEquals(frappe.db.get_value("Lead", quotation.lead, "email_id"), 
+			"test_cart_user@example.com")
 		self.assertEquals(quotation.customer, None)
 		self.assertEquals(quotation.contact_email, frappe.session.user)
 
@@ -58,6 +59,9 @@ class TestShoppingCart(unittest.TestCase):
 	def test_add_to_cart(self):
 		self.login_as_lead()
 
+		# remove from cart
+		self.remove_all_items_from_cart()
+		
 		# add first item
 		set_item_in_cart("_Test Item", 1)
 		quotation = self.test_get_cart_lead()
@@ -106,42 +110,11 @@ class TestShoppingCart(unittest.TestCase):
 		self.assertEquals(quotation.net_total, 0)
 		self.assertEquals(len(quotation.get("items")), 0)
 
-	def test_set_billing_address(self):
-		return
-
-		# first, add to cart
-		self.test_add_to_cart()
-
-		quotation = self.test_get_cart_lead()
-		default_address = frappe.get_doc("Address", {"lead": quotation.lead, "is_primary_address": 1})
-		self.assertEquals("customer_address", default_address.name)
-
-	def test_set_shipping_address(self):
-		# first, add to cart
-		self.test_add_to_cart()
-
-
-
-	def test_shipping_rule(self):
-		self.test_set_shipping_address()
-
-		# check if shipping rule changed
-		pass
-
-	def test_price_list(self):
-		self.test_set_billing_address()
-
-		# check if price changed
-		pass
-
-	def test_place_order(self):
-		pass
-
 	# helper functions
 	def enable_shopping_cart(self):
 		settings = frappe.get_doc("Shopping Cart Settings", "Shopping Cart Settings")
 
-		if settings.default_territory == "_Test Territory Rest Of The World":
+		if settings.get("price_lists"):
 			settings.enabled = 1
 		else:
 			settings.update({
@@ -163,7 +136,7 @@ class TestShoppingCart(unittest.TestCase):
 				{"doctype": "Shopping Cart Taxes and Charges Master", "parentfield": "sales_taxes_and_charges_masters",
 					"sales_taxes_and_charges_master": "_Test India Tax Master"},
 				{"doctype": "Shopping Cart Taxes and Charges Master", "parentfield": "sales_taxes_and_charges_masters",
-					"sales_taxes_and_charges_master": "_Test Sales Taxes and Charges Master - Rest of the World"},
+					"sales_taxes_and_charges_master": "_Test Sales Taxes and Charges Template - Rest of the World"},
 			])
 			settings.set("shipping_rules", {"doctype": "Shopping Cart Shipping Rule", "parentfield": "shipping_rules",
 					"shipping_rule": "_Test Shipping Rule - India"})
@@ -196,7 +169,8 @@ class TestShoppingCart(unittest.TestCase):
 			"email_id": "test_cart_lead@example.com",
 			"lead_name": "_Test Website Lead",
 			"status": "Open",
-			"territory": "_Test Territory Rest Of The World"
+			"territory": "_Test Territory Rest Of The World",
+			"company": "_Test Company"
 		})
 		lead.insert(ignore_permissions=True)
 
@@ -224,7 +198,12 @@ class TestShoppingCart(unittest.TestCase):
 			"lead_name": "_Test Website Lead",
 			"phone": "+91 0000000000"
 		}).insert(ignore_permissions=True)
+		
+	def remove_all_items_from_cart(self):
+		quotation = get_quotation()
+		quotation.set("items", [])
+		quotation.save(ignore_permissions=True)
 
 
-test_dependencies = ["Sales Taxes and Charges Master", "Price List", "Item Price", "Shipping Rule", "Currency Exchange",
+test_dependencies = ["Sales Taxes and Charges Template", "Price List", "Item Price", "Shipping Rule", "Currency Exchange",
 	"Customer Group", "Lead", "Customer", "Contact", "Address", "Item"]

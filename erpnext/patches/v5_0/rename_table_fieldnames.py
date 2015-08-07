@@ -1,8 +1,8 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from frappe.model import rename_field
+from frappe.model.utils.rename_field import rename_field
 from frappe.modules import scrub, get_doctype_module
 
 rename_map = {
@@ -63,11 +63,11 @@ rename_map = {
 		["payment_reconciliation_payments", "payments"],
 		["payment_reconciliation_invoices", "invoices"]
 	],
-	"Sales Taxes and Charges Master": [
+	"Sales Taxes and Charges Template": [
 		["other_charges", "taxes"],
 		["valid_for_territories", "territories"]
 	],
-	"Purchase Taxes and Charges Master": [
+	"Purchase Taxes and Charges Template": [
 		["other_charges", "taxes"]
 	],
 	"Shipping Rule": [
@@ -92,21 +92,11 @@ rename_map = {
 	"C-Form": [
 		["invoice_details", "invoices"]
 	],
-	"Customize Form": [
-		["customize_form_fields", "fields"]
-	],
-	"Email Alert": [
-		["email_alert_recipients", "recipients"]
-	],
 	"Employee": [
 		["employee_leave_approvers", "leave_approvers"],
 		["educational_qualification_details", "education"],
 		["previous_experience_details", "external_work_history"],
 		["experience_in_company_details", "internal_work_history"]
-	],
-	"Event": [
-		["event_individuals", "users"],
-		["event_roles", "roles"]
 	],
 	"Expense Claim": [
 		["expense_voucher_details", "expenses"]
@@ -121,7 +111,6 @@ rename_map = {
 		["installed_item_details", "items"]
 	],
 	"Item": [
-		["item_variants", "variants"],
 		["item_reorder", "reorder_levels"],
 		["uom_conversion_details", "uoms"],
 		["item_supplier_details", "supplier_items"],
@@ -167,9 +156,6 @@ rename_map = {
 		["pp_so_details", "sales_orders"],
 		["pp_details", "items"]
 	],
-	"Project": [
-		["project_milestones", "milestones"]
-	],
 	"Quality Inspection": [
 		["qa_specification_details", "readings"]
 	],
@@ -181,7 +167,7 @@ rename_map = {
 		["earning_details", "earnings"],
 		["deduction_details", "deductions"]
 	],
-	"Sales BOM": [
+	"Product Bundle": [
 		["sales_bom_items", "items"]
 	],
 	"SMS Settings": [
@@ -201,10 +187,6 @@ rename_map = {
 	],
 	"Time Log Batch": [
 		["time_log_batch_details", "time_logs"]
-	],
-	"Workflow": [
-		["workflow_document_states", "states"],
-		["workflow_transitions", "transitions"]
 	],
 	"Workstation": [
 		["workstation_operation_hours", "working_hours"]
@@ -242,13 +224,16 @@ def execute():
 	frappe.reload_doc("stock", "doctype", "item_variant")
 	frappe.reload_doc("accounts", "doctype", "party_account")
 	frappe.reload_doc("accounts", "doctype", "fiscal_year_company")
-	frappe.reload_doc("workflow", "doctype", "workflow")
 
 	#rename table fieldnames
 	for dn in rename_map:
+		if not frappe.db.exists("DocType", dn):
+			continue
 		frappe.reload_doc(get_doctype_module(dn), "doctype", scrub(dn))
 
 	for dt, field_list in rename_map.items():
+		if not frappe.db.exists("DocType", dt):
+			continue
 		for field in field_list:
 			rename_field(dt, field[0], field[1])
 

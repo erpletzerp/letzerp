@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 frappe.query_reports["General Ledger"] = {
@@ -51,6 +51,26 @@ frappe.query_reports["General Ledger"] = {
 			"fieldtype": "Break",
 		},
 		{
+			"fieldname":"party_type",
+			"label": __("Party Type"),
+			"fieldtype": "Select",
+			"options": ["", "Customer", "Supplier"],
+			"default": ""
+		},
+		{
+			"fieldname":"party",
+			"label": __("Party"),
+			"fieldtype": "Dynamic Link",
+			"get_options": function() {
+				var party_type = frappe.query_report.filters_by_name.party_type.get_value();
+				var party = frappe.query_report.filters_by_name.party.get_value();
+				if(party && !party_type) {
+					frappe.throw(__("Please select Party Type first"));
+				}
+				return party_type;
+			}
+		},
+		{
 			"fieldname":"group_by_voucher",
 			"label": __("Group by Voucher"),
 			"fieldtype": "Check",
@@ -60,6 +80,13 @@ frappe.query_reports["General Ledger"] = {
 			"fieldname":"group_by_account",
 			"label": __("Group by Account"),
 			"fieldtype": "Check",
+		},
+		{
+			"fieldname":"letter_head",
+			"label": __("Letter Head"),
+			"fieldtype": "Link",
+			"options": "Letter Head",
+			"default": frappe.defaults.get_default("letter_head"),
 		}
 	]
 }

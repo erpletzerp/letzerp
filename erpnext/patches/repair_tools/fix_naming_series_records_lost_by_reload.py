@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -13,7 +13,7 @@ doctype_series_map = {
 	'Attendance': 'ATT-',
 	'C-Form': 'C-FORM-',
 	'Customer': 'CUST-',
-	'Customer Issue': 'CI-',
+	'Warranty Claim': 'CI-',
 	'Delivery Note': 'DN-',
 	'Installation Note': 'IN-',
 	'Item': 'ITEM-',

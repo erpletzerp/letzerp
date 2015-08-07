@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -15,12 +15,13 @@ def after_install():
 	feature_setup()
 	from erpnext.setup.page.setup_wizard.setup_wizard import add_all_roles_to
 	add_all_roles_to("Administrator")
+	add_web_forms()
 	frappe.db.commit()
 
 def feature_setup():
 	"""save global defaults and features setup"""
 	doc = frappe.get_doc("Features Setup", "Features Setup")
-	doc.ignore_permissions = True
+	doc.flags.ignore_permissions = True
 
 	# store value as 1 for all these fields
 	flds = ['fs_item_serial_nos', 'fs_item_batch_nos', 'fs_brands', 'fs_item_barcode',
@@ -48,3 +49,12 @@ def set_single_defaults():
 				pass
 
 	frappe.db.set_default("date_format", "dd-mm-yyyy")
+
+def add_web_forms():
+	"""Import web forms for Issues and Addresses"""
+	from frappe.modules.import_file import import_file_by_path
+
+	import_file_by_path(frappe.get_app_path("erpnext", "setup/fixtures/web_form/issues.json"),
+		data_import=True)
+	import_file_by_path(frappe.get_app_path("erpnext", "setup/fixtures/web_form/addresses.json"),
+		data_import=True)

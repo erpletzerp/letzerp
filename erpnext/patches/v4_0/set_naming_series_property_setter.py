@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -10,7 +10,7 @@ doctype_series_map = {
 	'Attendance': 'ATT-',
 	'C-Form': 'C-FORM-',
 	'Customer': 'CUST-',
-	'Customer Issue': 'CI-',
+	'Warranty Claim': 'CI-',
 	'Delivery Note': 'DN-',
 	'Installation Note': 'IN-',
 	'Item': 'ITEM-',
@@ -35,7 +35,6 @@ doctype_series_map = {
 def execute():
 	series_to_set = get_series_to_set()
 	for doctype, opts in series_to_set.items():
-		print "Setting naming series", doctype, opts
 		set_series(doctype, opts["options"], opts["default"])
 
 def set_series(doctype, options, default):

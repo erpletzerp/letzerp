@@ -1,9 +1,19 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 {% include 'buying/doctype/purchase_common/purchase_common.js' %};
 
 frappe.require("assets/erpnext/js/utils.js");
+
+frappe.ui.form.on("Material Request Item", {
+	"qty": function(frm, doctype, name) {
+			var d = locals[doctype][name];
+			if (flt(d.qty) < flt(d.min_order_qty)) {
+				alert(__("Warning: Material Requested Qty is less than Minimum Order Qty"));
+			}
+		}
+	}
+);
 
 erpnext.buying.MaterialRequestController = erpnext.buying.BuyingController.extend({
 	onload: function(doc) {
@@ -53,8 +63,7 @@ erpnext.buying.MaterialRequestController = erpnext.buying.BuyingController.exten
 				cur_frm.add_custom_button(__('Stop'),
 					cur_frm.cscript['Stop Material Request'], "icon-exclamation", "btn-default");
 			}
-			cur_frm.add_custom_button(__('Send SMS'), cur_frm.cscript.send_sms,
-				"icon-mobile-phone", true);
+
 
 		}
 
@@ -106,7 +115,7 @@ erpnext.buying.MaterialRequestController = erpnext.buying.BuyingController.exten
 		d.get_input("fetch").on("click", function() {
 			var values = d.get_values();
 			if(!values) return;
-
+			values["company"] = cur_frm.doc.company;
 			frappe.call({
 				method: "erpnext.manufacturing.doctype.bom.bom.get_bom_items",
 				args: values,
@@ -164,12 +173,6 @@ erpnext.buying.MaterialRequestController = erpnext.buying.BuyingController.exten
 // for backward compatibility: combine new and previous states
 $.extend(cur_frm.cscript, new erpnext.buying.MaterialRequestController({frm: cur_frm}));
 
-cur_frm.cscript.qty = function(cdt, cdn) {
-	var d = locals[cdt][cdn];
-	if (flt(d.qty) < flt(d.min_order_qty))
-		alert(__("Warning: Material Requested Qty is less than Minimum Order Qty"));
-};
-
 cur_frm.cscript['Stop Material Request'] = function() {
 	var doc = cur_frm.doc;
 	var check = confirm(__("Do you really want to STOP this Material Request?"));
@@ -192,7 +195,4 @@ cur_frm.cscript['Unstop Material Request'] = function(){
 	}
 };
 
-cur_frm.cscript.send_sms = function() {
-	frappe.require("assets/erpnext/js/sms_manager.js");
-	var sms_man = new SMSManager(cur_frm.doc);
-}
+

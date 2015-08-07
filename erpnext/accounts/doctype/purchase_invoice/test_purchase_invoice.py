@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 
@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 import unittest
 import frappe
 import frappe.model
-import json
 from frappe.utils import cint
 import frappe.defaults
 from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import set_perpetual_inventory, \
@@ -55,7 +54,7 @@ class TestPurchaseInvoice(unittest.TestCase):
 			order by account asc""", pi.name, as_dict=1)
 		self.assertTrue(gl_entries)
 
-		expected_values = sorted([
+		expected_values = dict((d[0], d) for d in [
 			["_Test Payable - _TC", 0, 720],
 			["Stock Received But Not Billed - _TC", 750.0, 0],
 			["Expenses Included In Valuation - _TC", 0.0, 250.0],
@@ -64,9 +63,9 @@ class TestPurchaseInvoice(unittest.TestCase):
 		])
 
 		for i, gle in enumerate(gl_entries):
-			self.assertEquals(expected_values[i][0], gle.account)
-			self.assertEquals(expected_values[i][1], gle.debit)
-			self.assertEquals(expected_values[i][2], gle.credit)
+			self.assertEquals(expected_values[gle.account][0], gle.account)
+			self.assertEquals(expected_values[gle.account][1], gle.debit)
+			self.assertEquals(expected_values[gle.account][2], gle.credit)
 
 		set_perpetual_inventory(0)
 
@@ -88,7 +87,7 @@ class TestPurchaseInvoice(unittest.TestCase):
 			order by account asc""", pi.name, as_dict=1)
 		self.assertTrue(gl_entries)
 
-		expected_values = sorted([
+		expected_values = dict((d[0], d) for d in [
 			["_Test Payable - _TC", 0, 720],
 			["Stock Received But Not Billed - _TC", 500.0, 0],
 			["_Test Account Shipping Charges - _TC", 100.0, 0],
@@ -96,9 +95,9 @@ class TestPurchaseInvoice(unittest.TestCase):
 		])
 
 		for i, gle in enumerate(gl_entries):
-			self.assertEquals(expected_values[i][0], gle.account)
-			self.assertEquals(expected_values[i][1], gle.debit)
-			self.assertEquals(expected_values[i][2], gle.credit)
+			self.assertEquals(expected_values[gle.account][0], gle.account)
+			self.assertEquals(expected_values[gle.account][1], gle.debit)
+			self.assertEquals(expected_values[gle.account][2], gle.credit)
 
 		set_perpetual_inventory(0)
 
@@ -145,7 +144,7 @@ class TestPurchaseInvoice(unittest.TestCase):
 			self.assertEqual(item.item_tax_amount, expected_values[i][1])
 			self.assertEqual(item.valuation_rate, expected_values[i][2])
 
-		self.assertEqual(wrapper.net_total, 1250)
+		self.assertEqual(wrapper.base_net_total, 1250)
 
 		# tax amounts
 		expected_values = [
@@ -179,7 +178,7 @@ class TestPurchaseInvoice(unittest.TestCase):
 			self.assertEqual(item.item_tax_amount, expected_values[i][1])
 			self.assertEqual(item.valuation_rate, expected_values[i][2])
 
-		self.assertEqual(wrapper.net_total, 1250)
+		self.assertEqual(wrapper.base_net_total, 1250)
 
 		# tax amounts
 		expected_values = [
@@ -234,5 +233,100 @@ class TestPurchaseInvoice(unittest.TestCase):
 	def test_recurring_invoice(self):
 		from erpnext.controllers.tests.test_recurring_document import test_recurring_document
 		test_recurring_document(self, test_records)
+		
+	def test_total_purchase_cost_for_project(self):		
+		purchase_invoice = frappe.new_doc('Purchase Invoice')
+		purchase_invoice.update({
+			"credit_to": "_Test Payable - _TC",
+			"supplier": "_Test Supplier",
+			"company": "_Test Company",
+			"items": [
+				{
+					"rate": 500,
+					"qty": 1,
+					"project_name": "_Test Project",
+					"item_code": "_Test Item Home Desktop 100",
+					"expense_account": "_Test Account Cost for Goods Sold - _TC",
+					"cost_center": "_Test Cost Center - _TC"
+				},
+				{
+					"rate": 1500,
+					"qty": 1,
+					"project_name": "_Test Project",
+					"item_code": "_Test Item Home Desktop 200",
+					"expense_account": "_Test Account Cost for Goods Sold - _TC",
+					"cost_center": "_Test Cost Center - _TC"
+				}
+			]
+		})
+		purchase_invoice.save()
+		purchase_invoice.submit()		
+		self.assertEqual(frappe.db.get_value("Project", "_Test Project", "total_purchase_cost"), 2000)
+		
+		purchase_invoice1 = frappe.copy_doc(purchase_invoice)
+		purchase_invoice1.save()
+		purchase_invoice1.submit()
+		
+		self.assertEqual(frappe.db.get_value("Project", "_Test Project", "total_purchase_cost"), 4000)
+		
+		purchase_invoice1.cancel()		
+		self.assertEqual(frappe.db.get_value("Project", "_Test Project", "total_purchase_cost"), 2000)
+		
+		purchase_invoice.cancel()		
+		self.assertEqual(frappe.db.get_value("Project", "_Test Project", "total_purchase_cost"), 0)
+		
+	def test_return_purchase_invoice(self):
+		set_perpetual_inventory()
+		
+		pi = make_purchase_invoice()
+		
+		return_pi = make_purchase_invoice(is_return=1, return_against=pi.name, qty=-2)
+		
+		
+		# check gl entries for return
+		gl_entries = frappe.db.sql("""select account, debit, credit
+			from `tabGL Entry` where voucher_type=%s and voucher_no=%s
+			order by account desc""", ("Purchase Invoice", return_pi.name), as_dict=1)
+
+		self.assertTrue(gl_entries)
+
+		expected_values = {
+			"Creditors - _TC": [100.0, 0.0],
+			"Stock Received But Not Billed - _TC": [0.0, 100.0],
+		}
+
+		for gle in gl_entries:
+			self.assertEquals(expected_values[gle.account][0], gle.debit)
+			self.assertEquals(expected_values[gle.account][1], gle.credit)
+		
+		set_perpetual_inventory(0)
+		
+def make_purchase_invoice(**args):
+	pi = frappe.new_doc("Purchase Invoice")
+	args = frappe._dict(args)
+	if args.posting_date:
+		pi.posting_date = args.posting_date
+	if args.posting_time:
+		pi.posting_time = args.posting_time
+	pi.company = args.company or "_Test Company"
+	pi.supplier = args.supplier or "_Test Supplier"
+	pi.currency = args.currency or "INR"
+	pi.is_return = args.is_return
+	pi.return_against = args.return_against
+	
+	pi.append("items", {
+		"item_code": args.item or args.item_code or "_Test Item",
+		"warehouse": args.warehouse or "_Test Warehouse - _TC",
+		"qty": args.qty or 5,
+		"rate": args.rate or 50,
+		"conversion_factor": 1.0,
+		"serial_no": args.serial_no,
+		"stock_uom": "_Test UOM"
+	})
+	if not args.do_not_save:
+		pi.insert()
+		if not args.do_not_submit:
+			pi.submit()
+	return pi
 
 test_records = frappe.get_test_records('Purchase Invoice')

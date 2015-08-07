@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -13,7 +13,7 @@ class Account(Document):
 	def onload(self):
 		frozen_accounts_modifier = frappe.db.get_value("Accounts Settings", "Accounts Settings",
 			"frozen_accounts_modifier")
-		if not frozen_accounts_modifier or frozen_accounts_modifier in frappe.user.get_roles():
+		if not frozen_accounts_modifier or frozen_accounts_modifier in frappe.get_roles():
 			self.get("__onload").can_freeze_account = True
 
 	def autoname(self):
@@ -23,6 +23,7 @@ class Account(Document):
 	def validate(self):
 		self.validate_parent()
 		self.validate_root_details()
+		self.set_root_and_report_type()
 		self.validate_mandatory()
 		self.validate_warehouse_account()
 		self.validate_frozen_accounts_modifier()
@@ -32,24 +33,38 @@ class Account(Document):
 		"""Fetch Parent Details and validate parent account"""
 		if self.parent_account:
 			par = frappe.db.get_value("Account", self.parent_account,
-				["name", "group_or_ledger", "report_type", "root_type", "company"], as_dict=1)
+				["name", "is_group", "company"], as_dict=1)
 			if not par:
 				throw(_("Account {0}: Parent account {1} does not exist").format(self.name, self.parent_account))
 			elif par.name == self.name:
 				throw(_("Account {0}: You can not assign itself as parent account").format(self.name))
-			elif par.group_or_ledger != 'Group':
+			elif not par.is_group:
 				throw(_("Account {0}: Parent account {1} can not be a ledger").format(self.name, self.parent_account))
 			elif par.company != self.company:
 				throw(_("Account {0}: Parent account {1} does not belong to company: {2}")
 					.format(self.name, self.parent_account, self.company))
 
+	def set_root_and_report_type(self):
+		if self.parent_account:
+			par = frappe.db.get_value("Account", self.parent_account, ["report_type", "root_type"], as_dict=1)
+			
 			if par.report_type:
 				self.report_type = par.report_type
 			if par.root_type:
 				self.root_type = par.root_type
+			
+		if self.is_group:
+			db_value = frappe.db.get_value("Account", self.name, ["report_type", "root_type"], as_dict=1)
+			if db_value:
+				if self.report_type != db_value.report_type:
+					frappe.db.sql("update `tabAccount` set report_type=%s where lft > %s and rgt < %s", 
+						(self.report_type, self.lft, self.rgt))
+				if self.root_type != db_value.root_type:
+					frappe.db.sql("update `tabAccount` set root_type=%s where lft > %s and rgt < %s", 
+						(self.root_type, self.lft, self.rgt))
 
 	def validate_root_details(self):
-		#does not exists parent
+		# does not exists parent
 		if frappe.db.exists("Account", self.name):
 			if not frappe.db.get_value("Account", self.name, "parent_account"):
 				throw(_("Root cannot be edited."))
@@ -59,7 +74,7 @@ class Account(Document):
 		if old_value and old_value != self.freeze_account:
 			frozen_accounts_modifier = frappe.db.get_value('Accounts Settings', None, 'frozen_accounts_modifier')
 			if not frozen_accounts_modifier or \
-				frozen_accounts_modifier not in frappe.user.get_roles():
+				frozen_accounts_modifier not in frappe.get_roles():
 					throw(_("You are not authorized to set Frozen value"))
 
 	def validate_balance_must_be_debit_or_credit(self):
@@ -78,7 +93,7 @@ class Account(Document):
 		elif self.check_gle_exists():
 			throw(_("Account with existing transaction cannot be converted to ledger"))
 		else:
-			self.group_or_ledger = 'Ledger'
+			self.is_group = 0
 			self.save()
 			return 1
 
@@ -88,7 +103,7 @@ class Account(Document):
 		elif self.account_type:
 			throw(_("Cannot covert to Group because Account Type is selected."))
 		else:
-			self.group_or_ledger = 'Group'
+			self.is_group = 1
 			self.save()
 			return 1
 
@@ -160,10 +175,10 @@ class Account(Document):
 				throw(_("Account {0} does not exist").format(new))
 
 			val = list(frappe.db.get_value("Account", new_account,
-				["group_or_ledger", "root_type", "company"]))
+				["is_group", "root_type", "company"]))
 
-			if val != [self.group_or_ledger, self.root_type, self.company]:
-				throw(_("""Merging is only possible if following properties are same in both records. Group or Ledger, Root Type, Company"""))
+			if val != [self.is_group, self.root_type, self.company]:
+				throw(_("""Merging is only possible if following properties are same in both records. Is Group, Root Type, Company"""))
 
 		return new_account
 
@@ -177,7 +192,7 @@ class Account(Document):
 
 def get_parent_account(doctype, txt, searchfield, start, page_len, filters):
 	return frappe.db.sql("""select name from tabAccount
-		where group_or_ledger = 'Group' and docstatus != 2 and company = %s
+		where is_group = 1 and docstatus != 2 and company = %s
 		and %s like %s order by name limit %s, %s""" %
 		("%s", searchfield, "%s", "%s", "%s"),
 		(filters["company"], "%%%s%%" % txt, start, page_len), as_list=1)

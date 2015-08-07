@@ -1,9 +1,8 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
 import frappe
-from frappe.utils import cstr
 from frappe.model.mapper import get_mapped_doc
 from frappe import _
 
@@ -18,37 +17,22 @@ class Quotation(SellingController):
 		super(Quotation, self).validate()
 		self.set_status()
 		self.validate_order_type()
-		self.validate_for_items()
 		self.validate_uom_is_integer("stock_uom", "qty")
 		self.validate_quotation_to()
 
 	def has_sales_order(self):
 		return frappe.db.get_value("Sales Order Item", {"prevdoc_docname": self.name, "docstatus": 1})
 
-	def validate_for_items(self):
-		chk_dupl_itm = []
-		for d in self.get('items'):
-			if [cstr(d.item_code),cstr(d.description)] in chk_dupl_itm:
-				frappe.throw(_("Item {0} with same description entered twice").format(d.item_code))
-			else:
-				chk_dupl_itm.append([cstr(d.item_code),cstr(d.description)])
-
 	def validate_order_type(self):
 		super(Quotation, self).validate_order_type()
 
 		if self.order_type in ['Maintenance', 'Service']:
 			for d in self.get('items'):
-				is_service_item = frappe.db.sql("select is_service_item from `tabItem` where name=%s", d.item_code)
-				is_service_item = is_service_item and is_service_item[0][0] or 'No'
-
-				if is_service_item == 'No':
+				if not frappe.db.get_value("Item", d.item_code, "is_service_item"):
 					frappe.throw(_("Item {0} must be Service Item").format(d.item_code))
 		else:
 			for d in self.get('items'):
-				is_sales_item = frappe.db.sql("select is_sales_item from `tabItem` where name=%s", d.item_code)
-				is_sales_item = is_sales_item and is_sales_item[0][0] or 'No'
-
-				if is_sales_item == 'No':
+				if not frappe.db.get_value("Item", d.item_code, "is_sales_item"):
 					frappe.throw(_("Item {0} must be Sales Item").format(d.item_code))
 
 	def validate_quotation_to(self):
@@ -79,7 +63,7 @@ class Quotation(SellingController):
 		self.check_item_table()
 
 		# Check for Approving Authority
-		frappe.get_doc('Authorization Control').validate_approving_authority(self.doctype, self.company, self.grand_total, self)
+		frappe.get_doc('Authorization Control').validate_approving_authority(self.doctype, self.company, self.base_grand_total, self)
 
 		#update enquiry status
 		self.update_opportunity()
@@ -111,7 +95,7 @@ def _make_sales_order(source_name, target_doc=None, ignore_permissions=False):
 			target.customer = customer.name
 			target.customer_name = customer.customer_name
 		target.ignore_pricing_rule = 1
-		target.ignore_permissions = ignore_permissions
+		target.flags.ignore_permissions = ignore_permissions
 		target.run_method("set_missing_values")
 		target.run_method("calculate_taxes_and_totals")
 
@@ -149,10 +133,10 @@ def _make_customer(source_name, ignore_permissions=False):
 		customer_name = frappe.db.get_value("Customer", {"lead_name": lead_name},
 			["name", "customer_name"], as_dict=True)
 		if not customer_name:
-			from erpnext.selling.doctype.lead.lead import _make_customer
+			from erpnext.crm.doctype.lead.lead import _make_customer
 			customer_doclist = _make_customer(lead_name, ignore_permissions=ignore_permissions)
 			customer = frappe.get_doc(customer_doclist)
-			customer.ignore_permissions = ignore_permissions
+			customer.flags.ignore_permissions = ignore_permissions
 			if quotation[1] == "Shopping Cart":
 				customer.customer_group = frappe.db.get_value("Shopping Cart Settings", None,
 					"default_customer_group")
@@ -169,7 +153,6 @@ def _make_customer(source_name, ignore_permissions=False):
 				else:
 					raise
 			except frappe.MandatoryError:
-				from frappe.utils import get_url_to_form
 				frappe.throw(_("Please create Customer from Lead {0}").format(lead_name))
 		else:
 			return customer_name

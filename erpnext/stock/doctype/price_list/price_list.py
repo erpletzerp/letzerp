@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -51,7 +51,7 @@ class PriceList(Document):
 
 			if self.name == b.get(price_list_fieldname):
 				b.set(price_list_fieldname, None)
-				b.ignore_permissions = True
+				b.flags.ignore_permissions = True
 				b.save()
 
 		for module in ["Selling", "Buying"]:

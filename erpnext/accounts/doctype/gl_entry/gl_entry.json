@@ -25,17 +25,6 @@
    "permlevel": 0
   }, 
   {
-   "fieldname": "aging_date", 
-   "fieldtype": "Date", 
-   "in_filter": 1, 
-   "in_list_view": 1, 
-   "label": "Aging Date", 
-   "oldfieldname": "aging_date", 
-   "oldfieldtype": "Date", 
-   "permlevel": 0, 
-   "search_index": 0
-  }, 
-  {
    "fieldname": "account", 
    "fieldtype": "Link", 
    "in_filter": 1, 
@@ -59,7 +48,8 @@
    "fieldtype": "Dynamic Link", 
    "label": "Party", 
    "options": "party_type", 
-   "permlevel": 0
+   "permlevel": 0, 
+   "search_index": 1
   }, 
   {
    "fieldname": "cost_center", 
@@ -203,7 +193,7 @@
  "icon": "icon-list", 
  "idx": 1, 
  "in_create": 1, 
- "modified": "2014-09-11 18:35:22.822064", 
+ "modified": "2015-07-09 15:51:04.986518", 
  "modified_by": "Administrator", 
  "module": "Accounts", 
  "name": "GL Entry", 
@@ -234,6 +224,19 @@
    "report": 1, 
    "role": "Accounts Manager", 
    "submit": 0, 
+   "write": 0
+  }, 
+  {
+   "create": 0, 
+   "delete": 0, 
+   "email": 0, 
+   "export": 1, 
+   "permlevel": 0, 
+   "print": 0, 
+   "read": 1, 
+   "report": 1, 
+   "role": "Auditor", 
+   "share": 0, 
    "write": 0
   }
  ], 

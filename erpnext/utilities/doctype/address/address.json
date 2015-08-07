@@ -9,7 +9,7 @@
   {
    "fieldname": "address_details", 
    "fieldtype": "Section Break", 
-   "label": "Address Details", 
+   "label": "", 
    "options": "icon-map-marker", 
    "permlevel": 0
   }, 
@@ -112,7 +112,7 @@
   }, 
   {
    "default": "0", 
-   "description": "Check to make primary address", 
+   "description": "", 
    "fieldname": "is_primary_address", 
    "fieldtype": "Check", 
    "label": "Preferred Billing Address", 
@@ -120,7 +120,7 @@
   }, 
   {
    "default": "0", 
-   "description": "Check to make Shipping Address", 
+   "description": "", 
    "fieldname": "is_shipping_address", 
    "fieldtype": "Check", 
    "in_list_view": 0, 
@@ -199,7 +199,7 @@
  "icon": "icon-map-marker", 
  "idx": 1, 
  "in_dialog": 0, 
- "modified": "2015-01-05 12:10:31.519685", 
+ "modified": "2015-06-01 06:42:18.331818", 
  "modified_by": "Administrator", 
  "module": "Utilities", 
  "name": "Address", 
@@ -215,6 +215,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Sales User", 
+   "share": 1, 
    "submit": 0, 
    "write": 1
   }, 
@@ -228,6 +229,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Purchase User", 
+   "share": 1, 
    "submit": 0, 
    "write": 1
   }, 
@@ -241,6 +243,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Maintenance User", 
+   "share": 1, 
    "submit": 0, 
    "write": 1
   }, 
@@ -254,6 +257,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Accounts User", 
+   "share": 1, 
    "submit": 0, 
    "write": 1
   }

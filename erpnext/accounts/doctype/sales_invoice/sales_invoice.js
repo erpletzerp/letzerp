@@ -1,15 +1,15 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 // print heading
 cur_frm.pformat.print_heading = 'Invoice';
 
 {% include 'selling/sales_common.js' %};
-{% include 'accounts/doctype/sales_taxes_and_charges_master/sales_taxes_and_charges_master.js' %}
 
 frappe.provide("erpnext.accounts");
 erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.extend({
 	onload: function() {
+		var me = this;
 		this._super();
 
 		if(!this.frm.doc.__islocal && !this.frm.doc.customer && this.frm.doc.debit_to) {
@@ -23,7 +23,7 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 				this.frm.set_value("is_pos", 1);
 				this.is_pos(function() {
 					if (cint(frappe.defaults.get_user_defaults("fs_pos_view"))===1)
-						cur_frm.cscript.toggle_pos(true);
+						erpnext.pos.toggle(me.frm, true);
 				});
 			}
 		}
@@ -39,26 +39,15 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 	refresh: function(doc, dt, dn) {
 		this._super();
 
-		cur_frm.cscript.is_opening(doc, dt, dn);
 		cur_frm.dashboard.reset();
-
-		if(doc.docstatus==1) {
-			cur_frm.add_custom_button('View Ledger', function() {
-				frappe.route_options = {
-					"voucher_no": doc.name,
-					"from_date": doc.posting_date,
-					"to_date": doc.posting_date,
-					"company": doc.company,
-					group_by_voucher: 0
-				};
-				frappe.set_route("query-report", "General Ledger");
-			}, "icon-table");
-
-			// var percent_paid = cint(flt(doc.grand_total - doc.outstanding_amount) / flt(doc.grand_total) * 100);
-			// cur_frm.dashboard.add_progress(percent_paid + "% Paid", percent_paid);
-
-			cur_frm.add_custom_button(__('Send SMS'), cur_frm.cscript.send_sms, 'icon-mobile-phone');
-
+		
+		this.frm.toggle_reqd("due_date", !this.frm.doc.is_return);
+		
+		this.show_general_ledger();
+		
+		if(doc.update_stock) this.show_stock_ledger();
+		
+		if(doc.docstatus==1 && !doc.is_return) {
 			if(cint(doc.update_stock)!=1) {
 				// show Make Delivery Note button only if Sales Invoice is not created from Delivery Note
 				var from_delivery_note = false;
@@ -68,24 +57,27 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 					});
 
 				if(!from_delivery_note) {
-					cur_frm.page.add_menu_item(__('Make Delivery'), cur_frm.cscript['Make Delivery Note'], "icon-truck")
+					cur_frm.add_custom_button(__('Make Delivery'), cur_frm.cscript['Make Delivery Note'])
 				}
 			}
 
-			if(doc.outstanding_amount!=0) {
-				cur_frm.page.add_menu_item(__('Make Payment Entry'), cur_frm.cscript.make_bank_entry, "icon-money");
+			if(doc.outstanding_amount!=0 && !cint(doc.is_return)) {
+				cur_frm.add_custom_button(__('Make Payment Entry'), cur_frm.cscript.make_bank_entry);
 			}
+			
+			cur_frm.add_custom_button(doc.update_stock ? __('Make Sales Return') : __('Make Credit Note'), 
+				this.make_sales_return);
 		}
 
 		// Show buttons only when pos view is active
-		if (doc.docstatus===0 && !this.pos_active) {
+		if (cint(doc.docstatus==0) && cur_frm.page.current_view_name!=="pos" && !doc.is_return) {
 			cur_frm.cscript.sales_order_btn();
 			cur_frm.cscript.delivery_note_btn();
 		}
 	},
 
 	sales_order_btn: function() {
-		this.$sales_order_btn = cur_frm.page.add_menu_item(__('From Sales Order'),
+		this.$sales_order_btn = cur_frm.add_custom_button(__('From Sales Order'),
 			function() {
 				frappe.model.map_current_doc({
 					method: "erpnext.selling.doctype.sales_order.sales_order.make_sales_invoice",
@@ -98,11 +90,11 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 						company: cur_frm.doc.company
 					}
 				})
-			}, "icon-download", "btn-default");
+			});
 	},
 
 	delivery_note_btn: function() {
-		this.$delivery_note_btn = cur_frm.page.add_menu_item(__('From Delivery Note'),
+		this.$delivery_note_btn = cur_frm.add_custom_button(__('From Delivery Note'),
 			function() {
 				frappe.model.map_current_doc({
 					method: "erpnext.stock.doctype.delivery_note.delivery_note.make_sales_invoice",
@@ -118,7 +110,7 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 						};
 					}
 				});
-			}, "icon-download", "btn-default");
+			});
 	},
 
 	tc_name: function() {
@@ -167,18 +159,21 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 	},
 
 	allocated_amount: function() {
-		this.calculate_total_advance("Sales Invoice", "advances");
+		this.calculate_total_advance();
 		this.frm.refresh_fields();
 	},
 
 	write_off_outstanding_amount_automatically: function() {
 		if(cint(this.frm.doc.write_off_outstanding_amount_automatically)) {
-			frappe.model.round_floats_in(this.frm.doc, ["grand_total", "paid_amount"]);
+			frappe.model.round_floats_in(this.frm.doc, ["base_grand_total", "paid_amount"]);
 			// this will make outstanding amount 0
 			this.frm.set_value("write_off_amount",
-				flt(this.frm.doc.grand_total - this.frm.doc.paid_amount,
-					precision("write_off_amount"))
+				flt(this.frm.doc.base_grand_total - this.frm.doc.paid_amount - this.frm.doc.total_advance, precision("write_off_amount"))
 			);
+			this.frm.toggle_enable("write_off_amount", false);
+
+		} else {
+			this.frm.toggle_enable("write_off_amount", true);
 		}
 
 		this.calculate_outstanding_amount(false);
@@ -203,10 +198,16 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 		this.hide_fields(this.frm.doc);
 	},
 
-	items_on_form_rendered: function(doc, grid_row) {
-		erpnext.setup_serial_no(grid_row)
+	items_on_form_rendered: function() {
+		erpnext.setup_serial_no();
+	},
+	
+	make_sales_return: function() {
+		frappe.model.open_mapped_doc({
+			method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.make_sales_return",
+			frm: cur_frm
+		})
 	}
-
 });
 
 // for backward compatibility: combine new and previous states
@@ -216,30 +217,26 @@ $.extend(cur_frm.cscript, new erpnext.accounts.SalesInvoiceController({frm: cur_
 // ------------
 cur_frm.cscript.hide_fields = function(doc) {
 	par_flds = ['project_name', 'due_date', 'is_opening', 'source', 'total_advance', 'get_advances_received',
-	'advances', 'sales_partner', 'commission_rate', 'total_commission', 'advances', 'from_date', 'to_date'];
-
-	item_flds_normal = ['sales_order', 'delivery_note']
+		'advances', 'sales_partner', 'commission_rate', 'total_commission', 'advances', 'from_date', 'to_date'];
 
 	if(cint(doc.is_pos) == 1) {
 		hide_field(par_flds);
-		unhide_field('payments_section');
-		cur_frm.fields_dict['items'].grid.set_column_disp(item_flds_normal, false);
 	} else {
-		hide_field('payments_section');
 		for (i in par_flds) {
 			var docfield = frappe.meta.docfield_map[doc.doctype][par_flds[i]];
 			if(!docfield.hidden) unhide_field(par_flds[i]);
 		}
-		cur_frm.fields_dict['items'].grid.set_column_disp(item_flds_normal, true);
 	}
 
-	item_flds_stock = ['serial_no', 'batch_no', 'actual_qty', 'expense_account', 'warehouse']
+	item_flds_stock = ['serial_no', 'batch_no', 'actual_qty', 'expense_account', 'warehouse', 'expense_account', 'warehouse']
 	cur_frm.fields_dict['items'].grid.set_column_disp(item_flds_stock,
 		(cint(doc.update_stock)==1 ? true : false));
 
 	// India related fields
 	if (frappe.boot.sysdefaults.country == 'India') unhide_field(['c_form_applicable', 'c_form_no']);
 	else hide_field(['c_form_applicable', 'c_form_no']);
+
+	this.frm.toggle_enable("write_off_amount", !!!cint(doc.write_off_outstanding_amount_automatically));
 
 	cur_frm.refresh_fields();
 }
@@ -249,21 +246,22 @@ cur_frm.cscript.mode_of_payment = function(doc) {
 	if(doc.is_pos) {
 		return cur_frm.call({
 			method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.get_bank_cash_account",
-			args: { 
+			args: {
 				"mode_of_payment": doc.mode_of_payment,
 				"company": doc.company
 			 },
+			 callback: function(r, rt) {
+				if(r.message) {
+					cur_frm.set_value("cash_bank_account", r.message["account"]);
+				}
+
+			 }
 		});
 	 }
 }
 
 cur_frm.cscript.update_stock = function(doc, dt, dn) {
 	cur_frm.cscript.hide_fields(doc, dt, dn);
-}
-
-cur_frm.cscript.is_opening = function(doc, dt, dn) {
-	hide_field('aging_date');
-	if (doc.is_opening == 'Yes') unhide_field('aging_date');
 }
 
 cur_frm.cscript['Make Delivery Note'] = function() {
@@ -286,22 +284,12 @@ cur_frm.cscript.make_bank_entry = function() {
 	});
 }
 
-cur_frm.fields_dict.debit_to.get_query = function(doc) {
-	return{
-		filters: {
-			'report_type': 'Balance Sheet',
-			'group_or_ledger': 'Ledger',
-			'company': doc.company
-		}
-	}
-}
-
 cur_frm.fields_dict.cash_bank_account.get_query = function(doc) {
 	return {
 		filters: [
 			["Account", "account_type", "in", ["Cash", "Bank"]],
 			["Account", "root_type", "=", "Asset"],
-			["Account", "group_or_ledger", "=", "Ledger"],
+			["Account", "is_group", "=",0],
 			["Account", "company", "=", doc.company]
 		]
 	}
@@ -311,7 +299,7 @@ cur_frm.fields_dict.write_off_account.get_query = function(doc) {
 	return{
 		filters:{
 			'report_type': 'Profit and Loss',
-			'group_or_ledger': 'Ledger',
+			'is_group': 0,
 			'company': doc.company
 		}
 	}
@@ -322,7 +310,7 @@ cur_frm.fields_dict.write_off_account.get_query = function(doc) {
 cur_frm.fields_dict.write_off_cost_center.get_query = function(doc) {
 	return{
 		filters:{
-			'group_or_ledger': 'Ledger',
+			'is_group': 0,
 			'company': doc.company
 		}
 	}
@@ -353,7 +341,7 @@ if (sys_defaults.auto_accounting_for_stock) {
 			filters: {
 				'report_type': 'Profit and Loss',
 				'company': doc.company,
-				'group_or_ledger': 'Ledger'
+				"is_group": 0
 			}
 		}
 	}
@@ -366,21 +354,21 @@ cur_frm.fields_dict["items"].grid.get_field("cost_center").get_query = function(
 	return {
 		filters: {
 			'company': doc.company,
-			'group_or_ledger': 'Ledger'
+			"is_group": 0
 		}
 	}
 }
 
 cur_frm.cscript.income_account = function(doc, cdt, cdn) {
-	cur_frm.cscript.copy_account_in_all_row(doc, cdt, cdn, "income_account");
+	erpnext.utils.copy_value_in_all_row(doc, cdt, cdn, "items", "income_account");
 }
 
 cur_frm.cscript.expense_account = function(doc, cdt, cdn) {
-	cur_frm.cscript.copy_account_in_all_row(doc, cdt, cdn, "expense_account");
+	erpnext.utils.copy_value_in_all_row(doc, cdt, cdn, "items", "expense_account");
 }
 
 cur_frm.cscript.cost_center = function(doc, cdt, cdn) {
-	cur_frm.cscript.copy_account_in_all_row(doc, cdt, cdn, "cost_center");
+	erpnext.utils.copy_value_in_all_row(doc, cdt, cdn, "items", "cost_center");
 }
 
 cur_frm.cscript.on_submit = function(doc, cdt, cdn) {
@@ -393,11 +381,6 @@ cur_frm.cscript.on_submit = function(doc, cdt, cdn) {
 	} else if(cur_frm.doc.is_pos) {
 		new_doc("Sales Invoice");
 	}
-}
-
-cur_frm.cscript.send_sms = function() {
-	frappe.require("assets/erpnext/js/sms_manager.js");
-	var sms_man = new SMSManager(cur_frm.doc);
 }
 
 cur_frm.set_query("debit_to", function(doc) {

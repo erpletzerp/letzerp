@@ -1,41 +1,64 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 frappe.provide("erpnext.buying");
 
 {% include 'buying/doctype/purchase_common/purchase_common.js' %};
-{% include 'accounts/doctype/purchase_taxes_and_charges_master/purchase_taxes_and_charges_master.js' %}
 
 erpnext.buying.PurchaseOrderController = erpnext.buying.BuyingController.extend({
 	refresh: function(doc, cdt, cdn) {
+		var me = this;
 		this._super();
-		this.frm.dashboard.reset();
+		// this.frm.dashboard.reset();
 
-		if(doc.docstatus == 1 && doc.status != 'Stopped'){
-			cur_frm.dashboard.add_progress(cint(doc.per_received) + __("% Received"),
-				doc.per_received);
-			cur_frm.dashboard.add_progress(cint(doc.per_billed) + __("% Billed"),
-				doc.per_billed);
-
-			if(flt(doc.per_received, 2) < 100)
-				cur_frm.add_custom_button(__('Make Purchase Receipt'),
-					this.make_purchase_receipt, frappe.boot.doctype_icons["Purchase Receipt"]);
+		if(doc.docstatus == 1 && doc.status != 'Stopped') {
+			if(flt(doc.per_received, 2) < 100) {
+				cur_frm.add_custom_button(__('Make Purchase Receipt'), this.make_purchase_receipt);
+				
+				if(doc.is_subcontracted==="Yes") {
+					cur_frm.add_custom_button(__('Transfer Material to Supplier'), this.make_stock_entry);
+				}
+			}
 			if(flt(doc.per_billed, 2) < 100)
-				cur_frm.add_custom_button(__('Make Invoice'), this.make_purchase_invoice,
-					frappe.boot.doctype_icons["Purchase Invoice"]);
+				cur_frm.add_custom_button(__('Make Invoice'), this.make_purchase_invoice);
+			
 			if(flt(doc.per_billed, 2) < 100 || doc.per_received < 100)
-				cur_frm.add_custom_button(__('Stop'), cur_frm.cscript['Stop Purchase Order'],
-					"icon-exclamation", "btn-default");
-
-			cur_frm.add_custom_button('Send SMS', cur_frm.cscript.send_sms, "icon-mobile-phone", true);
+				cur_frm.add_custom_button(__('Stop'), cur_frm.cscript['Stop Purchase Order']);
 
 		} else if(doc.docstatus===0) {
 			cur_frm.cscript.add_from_mappers();
 		}
 
 		if(doc.docstatus == 1 && doc.status == 'Stopped')
-			cur_frm.add_custom_button(__('Unstop Purchase Order'),
-				cur_frm.cscript['Unstop Purchase Order'], "icon-check");
+			cur_frm.add_custom_button(__('Unstop Purchase Order'), cur_frm.cscript['Unstop Purchase Order']);
+	},
+
+	make_stock_entry: function() {
+		var items = $.map(cur_frm.doc.items, function(d) { return d.bom ? d.item_code : false; });
+		var me = this;
+		
+		if(items.length===1) {
+			me._make_stock_entry(items[0]);
+			return;
+		}
+		frappe.prompt({fieldname:"item", options: items, fieldtype:"Select",
+			label: __("Select Item for Transfer"), reqd: 1}, function(data) {
+			me._make_stock_entry(data.item);
+		}, __("Select Item"), __("Make"));
+	},
+
+	_make_stock_entry: function(item) {
+		frappe.call({
+			method:"erpnext.buying.doctype.purchase_order.purchase_order.make_stock_entry",
+			args: {
+				purchase_order: cur_frm.doc.name,
+				item_code: item
+			},
+			callback: function(r) {
+				var doclist = frappe.model.sync(r.message);
+				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+			}
+		});
 	},
 
 	make_purchase_receipt: function() {
@@ -66,7 +89,7 @@ erpnext.buying.PurchaseOrderController = erpnext.buying.BuyingController.extend(
 						company: cur_frm.doc.company
 					}
 				})
-			}, "icon-download", "btn-default"
+			}
 		);
 
 		cur_frm.add_custom_button(__('From Supplier Quotation'),
@@ -80,7 +103,7 @@ erpnext.buying.PurchaseOrderController = erpnext.buying.BuyingController.extend(
 						company: cur_frm.doc.company
 					}
 				})
-			}, "icon-download", "btn-default"
+			}
 		);
 
 		cur_frm.add_custom_button(__('For Supplier'),
@@ -92,7 +115,7 @@ erpnext.buying.PurchaseOrderController = erpnext.buying.BuyingController.extend(
 						docstatus: ["!=", 2],
 					}
 				})
-			}, "icon-download", "btn-default"
+			}
 		);
 	},
 
@@ -216,13 +239,10 @@ cur_frm.cscript.on_submit = function(doc, cdt, cdn) {
 	}
 }
 
-cur_frm.cscript.send_sms = function() {
-	frappe.require("assets/erpnext/js/sms_manager.js");
-	var sms_man = new SMSManager(cur_frm.doc);
-}
+
 
 cur_frm.cscript.schedule_date = function(doc, cdt, cdn) {
-	cur_frm.cscript.copy_account_in_all_row(doc, cdt, cdn, "schedule_date");
+	erpnext.utils.copy_value_in_all_row(doc, cdt, cdn, "items", "schedule_date");
 }
 
 frappe.provide("erpnext.buying");

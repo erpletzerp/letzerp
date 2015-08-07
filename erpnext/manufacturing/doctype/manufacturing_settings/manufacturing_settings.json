@@ -9,10 +9,25 @@
  "document_type": "Master", 
  "fields": [
   {
-   "description": "Will not allow to make time logs outside \"Workstation operation timings\"", 
-   "fieldname": "dont_allow_overtime", 
+   "fieldname": "capacity_planning", 
+   "fieldtype": "Section Break", 
+   "label": "Capacity Planning", 
+   "permlevel": 0, 
+   "precision": ""
+  }, 
+  {
+   "description": "Disables creation of time logs against Production Orders.\nOperations shall not be tracked against Production Order", 
+   "fieldname": "disable_capacity_planning", 
    "fieldtype": "Check", 
-   "label": "Don't allow overtime", 
+   "label": "Disable Capacity Planning and Time Tracking", 
+   "permlevel": 0, 
+   "precision": ""
+  }, 
+  {
+   "description": "Plan time logs outside Workstation Working Hours.", 
+   "fieldname": "allow_overtime", 
+   "fieldtype": "Check", 
+   "label": "Allow Overtime", 
    "permlevel": 0, 
    "precision": ""
   }, 
@@ -34,11 +49,25 @@
   }, 
   {
    "default": "30", 
-   "description": "Delay in start time of production order operations if automatically make time logs is used.\n(in mins)", 
-   "fieldname": "operations_start_delay", 
-   "fieldtype": "Float", 
-   "in_list_view": 1, 
-   "label": "Operations Start Delay", 
+   "description": "Try planning operations for X days in advance.", 
+   "fieldname": "capacity_planning_for_days", 
+   "fieldtype": "Int", 
+   "label": "Capacity Planning For (Days)", 
+   "permlevel": 0, 
+   "precision": ""
+  }, 
+  {
+   "description": "Default 10 mins", 
+   "fieldname": "mins_between_operations", 
+   "fieldtype": "Int", 
+   "label": "Time Between Operations (in mins)", 
+   "permlevel": 0, 
+   "precision": ""
+  }, 
+  {
+   "fieldname": "over_production_allowance_percentage", 
+   "fieldtype": "Percent", 
+   "label": "Over Production Allowance Percentage", 
    "permlevel": 0, 
    "precision": ""
   }
@@ -51,7 +80,7 @@
  "is_submittable": 0, 
  "issingle": 1, 
  "istable": 0, 
- "modified": "2014-12-22 12:43:15.261503", 
+ "modified": "2015-07-23 08:12:33.889753", 
  "modified_by": "Administrator", 
  "module": "Manufacturing", 
  "name": "Manufacturing Settings", 
@@ -73,6 +102,7 @@
    "report": 0, 
    "role": "Manufacturing Manager", 
    "set_user_permissions": 0, 
+   "share": 1, 
    "submit": 0, 
    "write": 1
   }

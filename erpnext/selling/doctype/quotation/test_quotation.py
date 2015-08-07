@@ -1,11 +1,12 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
+from __future__ import unicode_literals
 
 import frappe, json
 from frappe.utils import flt
 import unittest
 
-test_dependencies = ["Sales BOM"]
+test_dependencies = ["Product Bundle"]
 
 class TestQuotation(unittest.TestCase):
 	def test_make_sales_order(self):

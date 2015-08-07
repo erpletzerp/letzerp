@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -15,8 +15,8 @@ class Warehouse(Document):
 			self.name = self.warehouse_name + suffix
 
 	def validate(self):
-		if self.email_id and not validate_email_add(self.email_id):
-				throw(_("Please enter valid Email Id"))
+		if self.email_id:
+			validate_email_add(self.email_id, True)
 
 		self.update_parent_account()
 
@@ -48,13 +48,13 @@ class Warehouse(Document):
 						"doctype": "Account",
 						'account_name': self.warehouse_name,
 						'parent_account': self.create_account_under,
-						'group_or_ledger':'Ledger',
+						'is_group':0,
 						'company':self.company,
 						"account_type": "Warehouse",
 						"warehouse": self.name,
 						"freeze_account": "No"
 					})
-					ac_doc.ignore_permissions = True
+					ac_doc.flags.ignore_permissions = True
 					ac_doc.insert()
 					msgprint(_("Account head {0} created").format(ac_doc.name))
 
@@ -146,7 +146,7 @@ class Warehouse(Document):
 		frappe.db.set_value("Stock Settings", None, "allow_negative_stock", 1)
 
 		for item in frappe.db.sql("""select distinct item_code from (
-			select name as item_code from `tabItem` where ifnull(is_stock_item, 'Yes')='Yes'
+			select name as item_code from `tabItem` where is_stock_item=1
 			union
 			select distinct item_code from tabBin) a"""):
 				repost_stock(item[0], newdn)

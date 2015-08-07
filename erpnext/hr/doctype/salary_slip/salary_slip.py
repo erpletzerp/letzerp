@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -45,11 +45,11 @@ class SalarySlip(TransactionBase):
 
 	def get_leave_details(self, lwp=None):
 		if not self.fiscal_year:
-			self.fiscal_year = frappe.get_default("fiscal_year")
+			self.fiscal_year = frappe.db.get_default("fiscal_year")
 		if not self.month:
 			self.month = "%02d" % getdate(nowdate()).month
 
-		m = frappe.get_doc('Salary Manager').get_month_details(self.fiscal_year, self.month)
+		m = frappe.get_doc('Process Payroll').get_month_details(self.fiscal_year, self.month)
 		holidays = self.get_holidays_for_employee(m)
 
 		if not cint(frappe.db.get_value("HR Settings", "HR Settings",
@@ -188,7 +188,7 @@ class SalarySlip(TransactionBase):
 		receiver = frappe.db.get_value("Employee", self.employee, "company_email")
 		if receiver:
 			subj = 'Salary Slip - ' + cstr(self.month) +'/'+cstr(self.fiscal_year)
-			frappe.sendmail([receiver], subject=subj, msg = _("Please see attachment"),
+			frappe.sendmail([receiver], subject=subj, message = _("Please see attachment"),
 				attachments=[frappe.attach_print(self.doctype, self.name, file_name=self.name)])
 		else:
 			msgprint(_("Company Email ID not found, hence mail not sent"))

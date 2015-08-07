@@ -11,14 +11,14 @@
   {
    "fieldname": "details", 
    "fieldtype": "Section Break", 
-   "label": "Details", 
+   "label": "", 
    "permlevel": 0, 
    "precision": ""
   }, 
   {
    "allow_on_submit": 0, 
    "fieldname": "operation", 
-   "fieldtype": "Text", 
+   "fieldtype": "Link", 
    "hidden": 0, 
    "ignore_user_permissions": 0, 
    "in_filter": 0, 
@@ -27,20 +27,20 @@
    "no_copy": 0, 
    "oldfieldname": "operation_no", 
    "oldfieldtype": "Data", 
-   "options": "", 
+   "options": "Operation", 
    "permlevel": 0, 
    "precision": "", 
    "print_hide": 0, 
    "read_only": 1, 
    "report_hide": 0, 
-   "reqd": 1, 
+   "reqd": 0, 
    "search_index": 0, 
    "set_only_once": 0, 
    "unique": 0
   }, 
   {
    "allow_on_submit": 0, 
-   "fieldname": "opn_description", 
+   "fieldname": "description", 
    "fieldtype": "Text", 
    "hidden": 0, 
    "ignore_user_permissions": 0, 
@@ -117,12 +117,21 @@
    "permlevel": 0, 
    "precision": "", 
    "print_hide": 0, 
-   "read_only": 1, 
+   "read_only": 0, 
    "report_hide": 0, 
    "reqd": 0, 
    "search_index": 0, 
    "set_only_once": 0, 
    "unique": 0
+  }, 
+  {
+   "allow_on_submit": 1, 
+   "depends_on": "eval:(doc.docstatus==1)", 
+   "fieldname": "show_time_logs", 
+   "fieldtype": "Button", 
+   "label": "Show Time Logs", 
+   "permlevel": 0, 
+   "precision": ""
   }, 
   {
    "fieldname": "estimated_time_and_cost", 
@@ -139,7 +148,8 @@
    "no_copy": 1, 
    "permlevel": 0, 
    "precision": "", 
-   "reqd": 1
+   "read_only": 1, 
+   "reqd": 0
   }, 
   {
    "fieldname": "planned_end_time", 
@@ -149,7 +159,8 @@
    "no_copy": 1, 
    "permlevel": 0, 
    "precision": "", 
-   "reqd": 1
+   "read_only": 1, 
+   "reqd": 0
   }, 
   {
    "fieldname": "column_break_10", 
@@ -173,7 +184,7 @@
    "permlevel": 0, 
    "precision": "", 
    "print_hide": 0, 
-   "read_only": 1, 
+   "read_only": 0, 
    "report_hide": 0, 
    "reqd": 0, 
    "search_index": 0, 
@@ -255,7 +266,7 @@
    "read_only": 1
   }, 
   {
-   "description": "Hour Rate * Actual Operating Cost", 
+   "description": "(Hour Rate / 60) * Actual Operation Time", 
    "fieldname": "actual_operating_cost", 
    "fieldtype": "Currency", 
    "label": "Actual Operating Cost", 
@@ -282,7 +293,7 @@
  "is_submittable": 0, 
  "issingle": 0, 
  "istable": 1, 
- "modified": "2014-12-23 15:42:34.892964", 
+ "modified": "2015-05-21 13:46:27.730392", 
  "modified_by": "Administrator", 
  "module": "Manufacturing", 
  "name": "Production Order Operation", 

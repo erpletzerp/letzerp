@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -10,7 +10,7 @@ from frappe.model.document import Document
 class QualityInspection(Document):
 	def get_item_specification_details(self):
 		self.set('readings', [])
-		variant_of = frappe.db.get_query("Item", self.item_code, "variant_of")
+		variant_of = frappe.db.get_value("Item", self.item_code, "variant_of")
 		if variant_of:
 			specification = frappe.db.sql("select specification, value from `tabItem Quality Inspection Parameter` \
 				where parent in (%s, %s) order by idx", (self.item_code, variant_of))
@@ -31,14 +31,12 @@ class QualityInspection(Document):
 				(self.name, self.modified, self.purchase_receipt_no,
 					self.item_code))
 
-
 	def on_cancel(self):
 		if self.purchase_receipt_no:
 			frappe.db.sql("""update `tabPurchase Receipt Item` t1, `tabPurchase Receipt` t2
 				set t1.qa_no = '', t2.modified = %s
 				where t1.parent = %s and t1.item_code = %s and t1.parent = t2.name""",
 				(self.modified, self.purchase_receipt_no, self.item_code))
-
 
 def item_query(doctype, txt, searchfield, start, page_len, filters):
 	if filters.get("from"):

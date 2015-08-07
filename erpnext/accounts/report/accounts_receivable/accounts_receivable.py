@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd.
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd.
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -51,7 +51,7 @@ class ReceivablePayableReport(object):
 		currency_precision = get_currency_precision() or 2
 		dr_or_cr = "debit" if args.get("party_type") == "Customer" else "credit"
 
-		voucher_details = self.get_voucher_details()
+		voucher_details = self.get_voucher_details(args.get("party_type"))
 
 		future_vouchers = self.get_entries_after(self.filters.report_date, args.get("party_type"))
 
@@ -153,43 +153,44 @@ class ReceivablePayableReport(object):
 
 		return self.party_map
 
-	def get_voucher_details(self):
+	def get_voucher_details(self, party_type):
 		voucher_details = frappe._dict()
+		
+		if party_type == "Customer":
+			for si in frappe.db.sql("""select name, due_date
+				from `tabSales Invoice` where docstatus=1""", as_dict=1):
+					voucher_details.setdefault(si.name, si)
 
-		for si in frappe.db.sql("""select name, due_date
-			from `tabSales Invoice` where docstatus=1""", as_dict=1):
-				voucher_details.setdefault(si.name, si)
-
-		for pi in frappe.db.sql("""select name, due_date, bill_no, bill_date
-			from `tabPurchase Invoice` where docstatus=1""", as_dict=1):
-				voucher_details.setdefault(pi.name, pi)
+		if party_type == "Supplier":
+			for pi in frappe.db.sql("""select name, due_date, bill_no, bill_date
+				from `tabPurchase Invoice` where docstatus=1""", as_dict=1):
+					voucher_details.setdefault(pi.name, pi)
 
 		return voucher_details
 
 	def get_gl_entries(self, party_type):
 		if not hasattr(self, "gl_entries"):
 			conditions, values = self.prepare_conditions(party_type)
-			self.gl_entries = frappe.db.sql("""select * from `tabGL Entry`
-				where docstatus < 2 and party_type=%(party_type)s {0}
-				order by posting_date, party""".format(conditions), values, as_dict=True)
+			self.gl_entries = frappe.db.sql("""select name, posting_date, account, party_type, party, debit, credit,
+				voucher_type, voucher_no, against_voucher_type, against_voucher from `tabGL Entry`
+				where docstatus < 2 and party_type=%s {0} order by posting_date, party"""
+				.format(conditions), values, as_dict=True)
 
 		return self.gl_entries
 
 	def prepare_conditions(self, party_type):
 		conditions = [""]
-		values = {}
+		values = [party_type]
+		
 		party_type_field = scrub(party_type)
 
-		if party_type:
-			values["party_type"] = party_type
-
 		if self.filters.company:
-			conditions.append("company=%(company)s")
-			values["company"] = self.filters.company
+			conditions.append("company=%s")
+			values.append(self.filters.company)
 
 		if self.filters.get(party_type_field):
-			conditions.append("party=%(party)s")
-			values["party"] = self.filters.get(party_type_field)
+			conditions.append("party=%s")
+			values.append(self.filters.get(party_type_field))		
 
 		return " and ".join(conditions), values
 

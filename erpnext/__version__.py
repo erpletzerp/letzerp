@@ -1,1 +1,2 @@
-__version__ = '5.0.0-alpha'
+from __future__ import unicode_literals
+__version__ = '5.5.1'

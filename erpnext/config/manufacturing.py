@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from frappe import _
 
 def get_data():
@@ -19,6 +20,11 @@ def get_data():
 				},
 				{
 					"type": "doctype",
+					"name": "Time Log",
+					"description": _("Time Logs for manufacturing."),
+				},
+				{
+					"type": "doctype",
 					"name": "Item",
 					"description": _("All Products or Services."),
 				},
@@ -31,11 +37,6 @@ def get_data():
 					"type": "doctype",
 					"name": "Operation",
 					"description": _("Details of the operations carried out."),
-				},
-				{
-					"type": "doctype",
-					"name": "Manufacturing Settings",
-					"description": _("Global settings for all manufacturing processes."),
 				},
 
 			]
@@ -54,6 +55,24 @@ def get_data():
 					"name": "BOM Replace Tool",
 					"description": _("Replace Item / BOM in all BOMs"),
 				},
+				{
+					"type": "page",
+					"name": "bom-browser",
+					"icon": "icon-sitemap",
+					"label": _("BOM Browser"),
+					"description": _("Tree of Bill of Materials"),
+					"doctype": "BOM"
+				}
+			]
+		},
+		{
+			"label": _("Setup"),
+			"items": [
+				{
+					"type": "doctype",
+					"name": "Manufacturing Settings",
+					"description": _("Global settings for all manufacturing processes."),
+				}
 			]
 		},
 		{
@@ -84,6 +103,23 @@ def get_data():
 					"name": "Completed Production Orders",
 					"doctype": "Production Order"
 				},
+				{
+					"type": "report",
+					"is_query_report": True,
+					"name": "BOM Search",
+					"doctype": "BOM"
+				},
 			]
 		},
+		{
+			"label": _("Help"),
+			"icon": "icon-facetime-video",
+			"items": [
+				{
+					"type": "help",
+					"label": _("Bill of Materials"),
+					"youtube_id": "hDV0c1OeWLo"
+				},
+			]
+		}
 	]

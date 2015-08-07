@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -61,7 +61,7 @@ class Customer(TransactionBase):
 			c.customer = self.name
 			c.customer_name = self.customer_name
 			c.is_primary_contact = 1
-			c.ignore_permissions = getattr(self, "ignore_permissions", None)
+			c.flags.ignore_permissions = self.flags.ignore_permissions
 			c.autoname()
 			if not frappe.db.exists("Contact", c.name):
 				c.insert()
@@ -76,7 +76,7 @@ class Customer(TransactionBase):
 
 	def validate_name_with_customer_group(self):
 		if frappe.db.exists("Customer Group", self.name):
-			frappe.throw(_("A Customer Group exists with same name please change the Customer name or rename the Customer Group"))
+			frappe.throw(_("A Customer Group exists with same name please change the Customer name or rename the Customer Group"), frappe.NameError)
 
 	def delete_customer_address(self):
 		addresses = frappe.db.sql("""select name, lead from `tabAddress`
@@ -123,14 +123,17 @@ def get_dashboard_info(customer):
 		out[doctype] = frappe.db.get_value(doctype,
 			{"customer": customer, "docstatus": ["!=", 2] }, "count(*)")
 
-	billing = frappe.db.sql("""select sum(grand_total), sum(outstanding_amount)
+	billing_this_year = frappe.db.sql("""select sum(base_grand_total)
 		from `tabSales Invoice`
-		where customer=%s
-			and docstatus = 1
-			and fiscal_year = %s""", (customer, frappe.db.get_default("fiscal_year")))
+		where customer=%s and docstatus = 1 and fiscal_year = %s""",
+		(customer, frappe.db.get_default("fiscal_year")))
 
-	out["total_billing"] = billing[0][0]
-	out["total_unpaid"] = billing[0][1]
+	total_unpaid = frappe.db.sql("""select sum(outstanding_amount)
+		from `tabSales Invoice`
+		where customer=%s and docstatus = 1""", customer)
+
+	out["billing_this_year"] = billing_this_year[0][0] if billing_this_year else 0
+	out["total_unpaid"] = total_unpaid[0][0] if total_unpaid else 0
 	out["company_currency"] = frappe.db.sql_list("select distinct default_currency from tabCompany")
 
 	return out
@@ -161,7 +164,7 @@ def check_credit_limit(customer, company):
 
 		# If not authorized person raise exception
 		credit_controller = frappe.db.get_value('Accounts Settings', None, 'credit_controller')
-		if not credit_controller or credit_controller not in frappe.user.get_roles():
+		if not credit_controller or credit_controller not in frappe.get_roles():
 			throw(_("Please contact to the user who have Sales Master Manager {0} role")
 				.format(" / " + credit_controller if credit_controller else ""))
 
@@ -174,7 +177,7 @@ def get_customer_outstanding(customer, company):
 
 	# Outstanding based on Sales Order
 	outstanding_based_on_so = frappe.db.sql("""
-		select sum(grand_total*(100 - ifnull(per_billed, 0))/100)
+		select sum(base_grand_total*(100 - ifnull(per_billed, 0))/100)
 		from `tabSales Order`
 		where customer=%s and docstatus = 1 and company=%s
 		and ifnull(per_billed, 0) < 100 and status != 'Stopped'""", (customer, company))
@@ -189,8 +192,8 @@ def get_customer_outstanding(customer, company):
 					(ifnull(dn_item.amount, 0) - ifnull((select sum(ifnull(amount, 0))
 						from `tabSales Invoice Item`
 						where ifnull(dn_detail, '') = dn_item.name and docstatus = 1), 0)
-					)/dn.net_total
-				)*dn.grand_total
+					)/dn.base_net_total
+				)*dn.base_grand_total
 			)
 		from `tabDelivery Note` dn, `tabDelivery Note Item` dn_item
 		where

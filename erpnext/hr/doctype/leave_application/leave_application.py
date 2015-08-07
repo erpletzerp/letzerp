@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -204,6 +204,17 @@ class LeaveApplication(Document):
 		post(**{"txt": args.message, "contact": args.message_to, "subject": args.subject,
 			"notify": cint(self.follow_via_email)})
 
+@frappe.whitelist()
+def get_approvers(doctype, txt, searchfield, start, page_len, filters):
+	if not filters.get("employee"):
+		frappe.throw(_("Please select Employee Record first."))
+
+	return frappe.db.sql("""select user.name, user.first_name, user.last_name from
+		tabUser user, `tabEmployee Leave Approver` approver where
+		approver.parent = %s
+		and user.name like %s
+		and approver.leave_approver=user.name""", (filters.get("employee"), "%" + txt + "%"))
+
 def get_holidays(leave_app):
 	tot_hol = frappe.db.sql("""select count(*) from `tabHoliday` h1, `tabHoliday List` h2, `tabEmployee` e1
 		where e1.name = %s and h1.parent = h2.name and e1.holiday_list = h2.name
@@ -227,10 +238,16 @@ def get_total_leave_days(leave_app):
 	ret = {'total_leave_days' : 0.5}
 	if not leave_app.half_day:
 		tot_days = date_diff(leave_app.to_date, leave_app.from_date) + 1
-		holidays = leave_app.get_holidays()
-		ret = {
-			'total_leave_days' : flt(tot_days)-flt(holidays)
-		}
+		if frappe.db.get_value("Leave Type", leave_app.leave_type, "include_holiday"):
+			ret = {
+				'total_leave_days' : flt(tot_days)
+			}
+		else:
+			holidays = leave_app.get_holidays()
+			ret = {
+				'total_leave_days' : flt(tot_days)-flt(holidays)
+			}
+
 	return ret
 
 @frappe.whitelist()
@@ -328,6 +345,7 @@ def add_block_dates(events, start, end, employee, company):
 		events.append({
 			"doctype": "Leave Block List Date",
 			"from_date": block_date.block_date,
+			"to_date": block_date.block_date,
 			"title": _("Leave Blocked") + ": " + block_date.reason,
 			"name": "_" + str(cnt),
 		})
@@ -344,6 +362,7 @@ def add_holidays(events, start, end, employee, company):
 			events.append({
 				"doctype": "Holiday",
 				"from_date": holiday.holiday_date,
+				"to_date":  holiday.holiday_date,
 				"title": _("Holiday") + ": " + cstr(holiday.description),
 				"name": holiday.name
 			})

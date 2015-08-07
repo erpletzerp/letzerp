@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 frappe.require("assets/erpnext/js/stock_grid_report.js");
@@ -36,7 +36,7 @@ erpnext.StockAnalytics = erpnext.StockGridReport.extend({
 	},
 	setup_columns: function() {
 		var std_columns = [
-			{id: "check", name: __("Plot"), field: "check", width: 30,
+			{id: "_check", name: __("Plot"), field: "_check", width: 30,
 				formatter: this.check_formatter},
 			{id: "name", name: __("Item"), field: "name", width: 300,
 				formatter: this.tree_formatter},
@@ -139,7 +139,7 @@ erpnext.StockAnalytics = erpnext.StockGridReport.extend({
 
 					if(sl.voucher_type=="Stock Reconciliation") {
 						var diff = (sl.qty_after_transaction * sl.valuation_rate) - item.closing_qty_value;
-						wh.fifo_stack.push([sl.qty_after_transaction, sl.valuation_rate, sl.posting_date]);
+						wh.fifo_stack = [[sl.qty_after_transaction, sl.valuation_rate, sl.posting_date]];
 						wh.balance_qty = sl.qty_after_transaction;
 						wh.balance_value = sl.valuation_rate * sl.qty_after_transaction;
 					} else {
@@ -167,7 +167,6 @@ erpnext.StockAnalytics = erpnext.StockGridReport.extend({
 	},
 	update_groups: function() {
 		var me = this;
-
 		$.each(this.data, function(i, item) {
 			// update groups
 			if(!item.is_group && me.apply_filter(item, "brand")) {

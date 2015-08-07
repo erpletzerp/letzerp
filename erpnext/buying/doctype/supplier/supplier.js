@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 cur_frm.cscript.refresh = function(doc, dt, dn) {
@@ -42,8 +42,8 @@ cur_frm.cscript.make_dashboard = function(doc) {
 				if(r.message["company_currency"].length == 1) {
 					cur_frm.dashboard.set_headline(
 						__("Total Billing This Year: ") + "<b>"
-						+ format_currency(r.message.total_billing, r.message.company_currency[0])
-						+ '</b> / <span class="text-muted">' + __("Unpaid") + ": <b>"
+						+ format_currency(r.message.billing_this_year, r.message.company_currency[0])
+						+ '</b> / <span class="text-muted">' + __("Total Unpaid") + ": <b>"
 						+ format_currency(r.message.total_unpaid, r.message.company_currency[0])
 						+ '</b></span>');
 				}
@@ -65,7 +65,7 @@ cur_frm.fields_dict['accounts'].grid.get_field('account').get_query = function(d
 		filters: {
 			'account_type': 'Payable',
 			'company': d.company,
-			'group_or_ledger': 'Ledger'
+			"is_group": 0
 		}
 	}
 }

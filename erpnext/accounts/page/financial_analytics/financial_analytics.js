@@ -1,18 +1,18 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.require("assets/erpnext/js/account_tree_grid.js");
-
-frappe.pages['financial-analytics'].onload = function(wrapper) {
+frappe.pages['financial-analytics'].on_page_load = function(wrapper) {
 	frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __('Financial Analytics'),
 		single_column: true
 	});
 	erpnext.financial_analytics = new erpnext.FinancialAnalytics(wrapper, 'Financial Analytics');
-	frappe.add_breadcrumbs("Accounts")
+	frappe.breadcrumbs.add("Accounts");
 
-}
+};
+
+frappe.require("assets/erpnext/js/account_tree_grid.js");
 
 erpnext.FinancialAnalytics = erpnext.AccountTreeGrid.extend({
 	filters: [
@@ -49,7 +49,7 @@ erpnext.FinancialAnalytics = erpnext.AccountTreeGrid.extend({
 	],
 	setup_columns: function() {
 		var std_columns = [
-			{id: "check", name: __("Plot"), field: "check", width: 30,
+			{id: "_check", name: __("Plot"), field: "_check", width: 30,
 				formatter: this.check_formatter},
 			{id: "name", name: __("Account"), field: "name", width: 300,
 				formatter: this.tree_formatter},
@@ -265,7 +265,7 @@ erpnext.FinancialAnalytics = erpnext.AccountTreeGrid.extend({
 		var me= this;
 		$.each(this.data, function(i, account) {
 			// update groups
-			if((account.group_or_ledger == "Ledger") || (account.rgt - account.lft == 1)) {
+			if((account.is_group == 0) || (account.rgt - account.lft == 1)) {
 				var parent = me.parent_map[account.name];
 				while(parent) {
 					var parent_account = me.item_by_name[parent];

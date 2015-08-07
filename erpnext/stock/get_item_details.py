@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -37,7 +37,6 @@ def get_item_details(args):
 	item_doc = frappe.get_doc("Item", args.item_code)
 	item = item_doc
 
-
 	validate_item_details(args, item)
 
 	out = get_basic_details(args, item)
@@ -51,7 +50,7 @@ def get_item_details(args):
 	get_price_list_rate(args, item_doc, out)
 
 	if args.transaction_type == "selling" and cint(args.is_pos):
-		out.update(get_pos_settings_item_details(args.company, args))
+		out.update(get_pos_profiles_item_details(args.company, args))
 
 	# update args with out, if key or value not exists
 	for key, value in out.iteritems():
@@ -61,7 +60,7 @@ def get_item_details(args):
 	out.update(get_pricing_rule_for_item(args))
 
 	if args.get("parenttype") in ("Sales Invoice", "Delivery Note"):
-		if item_doc.has_serial_no == "Yes" and not args.serial_no:
+		if item_doc.has_serial_no == 1 and not args.serial_no:
 			out.serial_no = get_serial_nos_by_fifo(args, item_doc)
 
 	if args.transaction_date and item.lead_time_days:
@@ -96,6 +95,7 @@ def process_args(args):
 
 	return args
 
+@frappe.whitelist()
 def get_item_code(barcode=None, serial_no=None):
 	if barcode:
 		item_code = frappe.db.get_value("Item", {"barcode": barcode})
@@ -118,18 +118,21 @@ def validate_item_details(args, item):
 	if args.transaction_type == "selling":
 		# validate if sales item or service item
 		if args.get("order_type") == "Maintenance":
-			if item.is_service_item != "Yes":
+			if item.is_service_item != 1:
 				throw(_("Item {0} must be a Service Item.").format(item.name))
 
-		elif item.is_sales_item != "Yes":
+		elif item.is_sales_item != 1:
 			throw(_("Item {0} must be a Sales Item").format(item.name))
+
+		if cint(item.has_variants):
+			throw(_("Item {0} is a template, please select one of its variants").format(item.name))
 
 	elif args.transaction_type == "buying" and args.parenttype != "Material Request":
 		# validate if purchase item or subcontracted item
-		if item.is_purchase_item != "Yes":
+		if item.is_purchase_item != 1:
 			throw(_("Item {0} must be a Purchase Item").format(item.name))
 
-		if args.get("is_subcontracted") == "Yes" and item.is_sub_contracted_item != "Yes":
+		if args.get("is_subcontracted") == "Yes" and item.is_sub_contracted_item != 1:
 			throw(_("Item {0} must be a Sub-contracted Item").format(item.name))
 
 def get_basic_details(args, item):
@@ -147,7 +150,8 @@ def get_basic_details(args, item):
 	out = frappe._dict({
 		"item_code": item.name,
 		"item_name": item.item_name,
-		"description": cstr(item.description_html).strip() or cstr(item.description).strip(),
+		"description": cstr(item.description).strip(),
+		"image": cstr(item.image).strip(),
 		"warehouse": user_default_warehouse or args.warehouse or item.default_warehouse,
 		"income_account": get_default_income_account(args, item),
 		"expense_account": get_default_expense_account(args, item),
@@ -158,16 +162,25 @@ def get_basic_details(args, item):
 		"uom": item.stock_uom,
 		"min_order_qty": flt(item.min_order_qty) if args.parenttype == "Material Request" else "",
 		"conversion_factor": 1.0,
-		"qty": args.qty or 0.0,
-		"stock_qty": 0.0,
+		"qty": args.qty or 1.0,
+		"stock_qty": 1.0,
 		"price_list_rate": 0.0,
 		"base_price_list_rate": 0.0,
 		"rate": 0.0,
 		"base_rate": 0.0,
 		"amount": 0.0,
 		"base_amount": 0.0,
+		"net_rate": 0.0,
+		"net_amount": 0.0,
 		"discount_percentage": 0.0
 	})
+
+	# if default specified in item is for another company, fetch from company
+	for d in [["Account", "income_account", "default_income_account"], ["Account", "expense_account", "default_expense_account"],
+		["Cost Center", "cost_center", "cost_center"], ["Warehouse", "warehouse", ""]]:
+			company = frappe.db.get_value(d[0], out.get(d[1]), "company")
+			if not out[d[1]] or (company and args.company != company):
+				out[d[1]] = frappe.db.get_value("Company", args.company, d[2]) if d[2] else None
 
 	for fieldname in ("item_name", "item_group", "barcode", "brand", "stock_uom"):
 		out[fieldname] = item.get(fieldname)
@@ -177,20 +190,17 @@ def get_basic_details(args, item):
 def get_default_income_account(args, item):
 	return (item.income_account
 		or args.income_account
-		or frappe.db.get_value("Item Group", item.item_group, "default_income_account")
-		or frappe.db.get_value("Company", args.company, "default_income_account"))
+		or frappe.db.get_value("Item Group", item.item_group, "default_income_account"))
 
 def get_default_expense_account(args, item):
 	return (item.expense_account
 		or args.expense_account
-		or frappe.db.get_value("Item Group", item.item_group, "default_expense_account")
-		or frappe.db.get_value("Company", args.company, "default_expense_account"))
+		or frappe.db.get_value("Item Group", item.item_group, "default_expense_account"))
 
 def get_default_cost_center(args, item):
 	return (frappe.db.get_value("Project", args.get("project_name"), "cost_center")
 		or (item.selling_cost_center if args.get("transaction_type") == "selling" else item.buying_cost_center)
-		or frappe.db.get_value("Item Group", item.item_group, "default_cost_center")
-		or frappe.db.get_value("Company", args.get("company"), "cost_center"))
+		or frappe.db.get_value("Item Group", item.item_group, "default_cost_center"))
 
 def get_price_list_rate(args, item_doc, out):
 	meta = frappe.get_meta(args.parenttype)
@@ -199,12 +209,13 @@ def get_price_list_rate(args, item_doc, out):
 		validate_price_list(args)
 		validate_conversion_rate(args, meta)
 
-
 		price_list_rate = get_price_list_rate_for(args, item_doc.name)
 		if not price_list_rate and item_doc.variant_of:
 			price_list_rate = get_price_list_rate_for(args, item_doc.variant_of)
 
 		if not price_list_rate:
+			if args.price_list and args.rate:
+				insert_item_price(args)
 			return {}
 
 		out.price_list_rate = flt(price_list_rate) * flt(args.plc_conversion_rate) \
@@ -214,6 +225,22 @@ def get_price_list_rate(args, item_doc, out):
 			from erpnext.stock.doctype.item.item import get_last_purchase_details
 			out.update(get_last_purchase_details(item_doc.name,
 				args.parent, args.conversion_rate))
+
+def insert_item_price(args):
+	"""Insert Item Price if Price List and Price List Rate are specified and currency is the same"""
+	if frappe.db.get_value("Price List", args.price_list, "currency") == args.currency \
+		and cint(frappe.db.get_single_value("Stock Settings", "auto_insert_price_list_rate_if_missing")):
+		if frappe.has_permission("Item Price", "write"):
+			item_price = frappe.get_doc({
+				"doctype": "Item Price",
+				"price_list": args.price_list,
+				"item_code": args.item_code,
+				"currency": args.currency,
+				"price_list_rate": args.rate
+			})
+			item_price.insert()
+			frappe.msgprint("Item Price added for {0} in Price List {1}".format(args.item_code,
+				args.price_list))
 
 def get_price_list_rate_for(args, item_code):
 	return frappe.db.get_value("Item Price",
@@ -257,16 +284,16 @@ def get_party_item_code(args, item_doc, out):
 		item_supplier = item_doc.get("supplier_items", {"supplier": args.supplier})
 		out.supplier_part_no = item_supplier[0].supplier_part_no if item_supplier else None
 
-def get_pos_settings_item_details(company, args, pos_settings=None):
+def get_pos_profiles_item_details(company, args, pos_profiles=None):
 	res = frappe._dict()
 
-	if not pos_settings:
-		pos_settings = get_pos_settings(company)
+	if not pos_profiles:
+		pos_profiles = get_pos_profiles(company)
 
-	if pos_settings:
+	if pos_profiles:
 		for fieldname in ("income_account", "cost_center", "warehouse", "expense_account"):
-			if not args.get(fieldname) and pos_settings.get(fieldname):
-				res[fieldname] = pos_settings.get(fieldname)
+			if not args.get(fieldname) and pos_profiles.get(fieldname):
+				res[fieldname] = pos_profiles.get(fieldname)
 
 		if res.get("warehouse"):
 			res.actual_qty = get_available_qty(args.item_code,
@@ -274,15 +301,15 @@ def get_pos_settings_item_details(company, args, pos_settings=None):
 
 	return res
 
-def get_pos_settings(company):
-	pos_settings = frappe.db.sql("""select * from `tabPOS Setting` where user = %s
+def get_pos_profiles(company):
+	pos_profiles = frappe.db.sql("""select * from `tabPOS Profile` where user = %s
 		and company = %s""", (frappe.session['user'], company), as_dict=1)
 
-	if not pos_settings:
-		pos_settings = frappe.db.sql("""select * from `tabPOS Setting`
+	if not pos_profiles:
+		pos_profiles = frappe.db.sql("""select * from `tabPOS Profile`
 			where ifnull(user,'') = '' and company = %s""", company, as_dict=1)
 
-	return pos_settings and pos_settings[0] or None
+	return pos_profiles and pos_profiles[0] or None
 
 
 def get_serial_nos_by_fifo(args, item_doc):
@@ -291,8 +318,17 @@ def get_serial_nos_by_fifo(args, item_doc):
 		order by timestamp(purchase_date, purchase_time) asc limit %(qty)s""", {
 			"item_code": args.item_code,
 			"warehouse": args.warehouse,
-			"qty": cint(args.qty)
+			"qty": abs(cint(args.qty))
 		}))
+
+def get_actual_batch_qty(batch_no,warehouse,item_code):
+	actual_batch_qty = 0
+	if batch_no:
+		actual_batch_qty = flt(frappe.db.sql("""select sum(actual_qty)
+			from `tabStock Ledger Entry`
+			where warehouse=%s and item_code=%s and batch_no=%s""",
+			(warehouse, item_code, batch_no))[0][0])
+	return actual_batch_qty
 
 @frappe.whitelist()
 def get_conversion_factor(item_code, uom):
@@ -313,6 +349,12 @@ def get_projected_qty(item_code, warehouse):
 def get_available_qty(item_code, warehouse):
 	return frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse},
 		["projected_qty", "actual_qty"], as_dict=True) or {}
+
+@frappe.whitelist()
+def get_batch_qty(batch_no,warehouse,item_code):
+	actual_batch_qty = get_actual_batch_qty(batch_no,warehouse,item_code)
+	if batch_no:
+		return {'actual_batch_qty': actual_batch_qty}
 
 @frappe.whitelist()
 def apply_price_list(args):
@@ -364,21 +406,22 @@ def apply_price_list_on_item(args):
 	return item_details
 
 def get_price_list_currency(price_list):
-	result = frappe.db.get_value("Price List", {"name": price_list,
-		"enabled": 1}, ["name", "currency"], as_dict=True)
+	if price_list:
+		result = frappe.db.get_value("Price List", {"name": price_list,
+			"enabled": 1}, ["name", "currency"], as_dict=True)
 
-	if not result:
-		throw(_("Price List {0} is disabled").format(price_list))
+		if not result:
+			throw(_("Price List {0} is disabled").format(price_list))
 
-	return result.currency
+		return result.currency
 
 def get_price_list_currency_and_exchange_rate(args):
 	price_list_currency = get_price_list_currency(args.price_list)
 	plc_conversion_rate = args.plc_conversion_rate
 
-	if (not plc_conversion_rate) or (price_list_currency != args.price_list_currency):
-		plc_conversion_rate = get_exchange_rate(price_list_currency, args.currency) \
-			or plc_conversion_rate
+	if (not plc_conversion_rate) or (price_list_currency and args.price_list_currency \
+		and price_list_currency != args.price_list_currency):
+			plc_conversion_rate = get_exchange_rate(price_list_currency, args.currency) or plc_conversion_rate
 
 	return {
 		"price_list_currency": price_list_currency,

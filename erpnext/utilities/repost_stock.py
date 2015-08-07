@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -145,7 +145,7 @@ def set_stock_balance_as_per_serial_no(item_code=None, posting_date=None, postin
 
 	bin = frappe.db.sql("""select bin.item_code, bin.warehouse, bin.actual_qty, item.stock_uom
 		from `tabBin` bin, tabItem item
-		where bin.item_code = item.name and item.has_serial_no = 'Yes' %s""" % condition)
+		where bin.item_code = item.name and item.has_serial_no = 1 %s""" % condition)
 
 	for d in bin:
 		serial_nos = frappe.db.sql("""select count(name) from `tabSerial No`
@@ -179,8 +179,8 @@ def set_stock_balance_as_per_serial_no(item_code=None, posting_date=None, postin
 		}
 
 		sle_doc = frappe.get_doc(sle_dict)
-		sle_doc.ignore_validate = True
-		sle_doc.ignore_links = True
+		sle_doc.flags.ignore_validate = True
+		sle_doc.flags.ignore_links = True
 		sle_doc.insert()
 
 		args = sle_dict.copy()

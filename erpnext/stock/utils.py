@@ -1,6 +1,7 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+from __future__ import unicode_literals
 import frappe
 from frappe import _
 import json
@@ -34,19 +35,26 @@ def get_stock_value_on(warehouse=None, posting_date=None, item_code=None):
 
 	return sum(sle_map.values())
 
-def get_stock_balance(item_code, warehouse, posting_date=None, posting_time=None):
+def get_stock_balance(item_code, warehouse, posting_date=None, posting_time=None, with_valuation_rate=False):
+	"""Returns stock balance quantity at given warehouse on given posting date or current date.
+
+	If `with_valuation_rate` is True, will return tuple (qty, rate)"""
+
+	from erpnext.stock.stock_ledger import get_previous_sle
+
 	if not posting_date: posting_date = nowdate()
 	if not posting_time: posting_time = nowtime()
-	last_entry = frappe.db.sql("""select qty_after_transaction from `tabStock Ledger Entry`
-		where item_code=%s and warehouse=%s
-			and timestamp(posting_date, posting_time) < timestamp(%s, %s)
-		order by timestamp(posting_date, posting_time) limit 1""",
-			(item_code, warehouse, posting_date, posting_time))
 
-	if last_entry:
-		return last_entry[0][0]
+	last_entry = get_previous_sle({
+		"item_code": item_code,
+		"warehouse":warehouse,
+		"posting_date": posting_date,
+		"posting_time": posting_time })
+
+	if with_valuation_rate:
+		return (last_entry.qty_after_transaction, last_entry.valuation_rate) if last_entry else (0.0, 0.0)
 	else:
-		return 0.0
+		return last_entry.qty_after_transaction or 0.0
 
 def get_latest_stock_balance():
 	bin_map = {}
@@ -64,18 +72,18 @@ def get_bin(item_code, warehouse):
 			"item_code": item_code,
 			"warehouse": warehouse,
 		})
-		bin_obj.ignore_permissions = 1
+		bin_obj.flags.ignore_permissions = 1
 		bin_obj.insert()
 	else:
 		bin_obj = frappe.get_doc('Bin', bin)
-	bin_obj.ignore_permissions = True
+	bin_obj.flags.ignore_permissions = True
 	return bin_obj
 
-def update_bin(args):
+def update_bin(args, allow_negative_stock=False, via_landed_cost_voucher=False):
 	is_stock_item = frappe.db.get_value('Item', args.get("item_code"), 'is_stock_item')
-	if is_stock_item == 'Yes':
+	if is_stock_item:
 		bin = get_bin(args.get("item_code"), args.get("warehouse"))
-		bin.update_stock(args)
+		bin.update_stock(args, allow_negative_stock, via_landed_cost_voucher)
 		return bin
 	else:
 		frappe.msgprint(_("Item {0} ignored since it is not a stock item").format(args.get("item_code")))
@@ -165,4 +173,3 @@ def validate_warehouse_company(warehouse, company):
 	if warehouse_company and warehouse_company != company:
 		frappe.throw(_("Warehouse {0} does not belong to company {1}").format(warehouse, company),
 			InvalidWarehouseCompany)
-

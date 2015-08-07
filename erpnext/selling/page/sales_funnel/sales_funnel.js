@@ -1,7 +1,7 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.pages['sales-funnel'].onload = function(wrapper) {
+frappe.pages['sales-funnel'].on_page_load = function(wrapper) {
 	frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __('Sales Funnel'),
@@ -10,7 +10,7 @@ frappe.pages['sales-funnel'].onload = function(wrapper) {
 
 	wrapper.sales_funnel = new erpnext.SalesFunnel(wrapper);
 
-	frappe.add_breadcrumbs("Selling");
+	frappe.breadcrumbs.add("Selling");
 }
 
 erpnext.SalesFunnel = Class.extend({

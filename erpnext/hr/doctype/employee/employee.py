@@ -1,12 +1,12 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
 import frappe
 
-from frappe.utils import getdate, validate_email_add, cint
+from frappe.utils import getdate, validate_email_add, today
 from frappe.model.naming import make_autoname
-from frappe import throw, _, msgprint
+from frappe import throw, _
 import frappe.permissions
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
@@ -32,7 +32,7 @@ class Employee(Document):
 		self.employee = self.name
 
 	def validate(self):
-		from erpnext.utilities import validate_status
+		from erpnext.controllers.status_updater import validate_status
 		validate_status(self.status, ["Active", "Left"])
 
 		self.employee = self.name
@@ -45,6 +45,10 @@ class Employee(Document):
 		if self.user_id:
 			self.validate_for_enabled_user_id()
 			self.validate_duplicate_user_id()
+		else:
+			existing_user_id = frappe.db.get_value("Employee", self.name, "user_id")
+			if existing_user_id:
+				frappe.permissions.remove_user_permission("Employee", self.name, existing_user_id)
 
 	def on_update(self):
 		if self.user_id:
@@ -58,7 +62,7 @@ class Employee(Document):
 	def update_user(self):
 		# add employee role if missing
 		user = frappe.get_doc("User", self.user_id)
-		user.ignore_permissions = True
+		user.flags.ignore_permissions = True
 
 		if "Employee" not in user.get("user_roles"):
 			user.add_roles("Employee")
@@ -97,6 +101,9 @@ class Employee(Document):
 		user.save()
 
 	def validate_date(self):
+		if self.date_of_birth and getdate(self.date_of_birth) > getdate(today()):
+			throw(_("Date of Birth cannot be greater than today."))
+
 		if self.date_of_birth and self.date_of_joining and getdate(self.date_of_birth) >= getdate(self.date_of_joining):
 			throw(_("Date of Joining must be greater than Date of Birth"))
 
@@ -110,10 +117,10 @@ class Employee(Document):
 			throw(_("Contract End Date must be greater than Date of Joining"))
 
 	def validate_email(self):
-		if self.company_email and not validate_email_add(self.company_email):
-			throw(_("Please enter valid Company Email"))
-		if self.personal_email and not validate_email_add(self.personal_email):
-			throw(_("Please enter valid Personal Email"))
+		if self.company_email:
+			validate_email_add(self.company_email, True)
+		if self.personal_email:
+			validate_email_add(self.personal_email, True)
 
 	def validate_status(self):
 		if self.status == 'Left' and not self.relieving_date:
@@ -131,13 +138,13 @@ class Employee(Document):
 		employee = frappe.db.sql_list("""select name from `tabEmployee` where
 			user_id=%s and status='Active' and name!=%s""", (self.user_id, self.name))
 		if employee:
-			throw(_("User {0} is already assigned to Employee {1}").format(self.user_id, employee[0]))
+			throw(_("User {0} is already assigned to Employee {1}").format(self.user_id, employee[0]), frappe.DuplicateEntryError)
 
 	def validate_employee_leave_approver(self):
 		for l in self.get("leave_approvers")[:]:
 			if "Leave Approver" not in frappe.get_roles(l.leave_approver):
-				self.get("leave_approvers").remove(l)
-				msgprint(_("{0} is not a valid Leave Approver. Removing row #{1}.").format(l.leave_approver, l.idx))
+				frappe.get_doc("User", l.leave_approver).add_roles("Leave Approver")
+
 
 	def validate_reports_to(self):
 		if self.reports_to == self.name:
@@ -214,6 +221,6 @@ def send_birthday_reminders():
 def get_employees_who_are_born_today():
 	"""Get Employee properties whose birthday is today."""
 	return frappe.db.sql("""select name, personal_email, company_email, employee_name
-		from tabEmployee where day(date_of_birth) = day(curdate())
-		and month(date_of_birth) = month(curdate())
-		and status = 'Active'""", as_dict=True)
+		from tabEmployee where day(date_of_birth) = day(%(date)s)
+		and month(date_of_birth) = month(%(date)s)
+		and status = 'Active'""", {"date": today()}, as_dict=True)

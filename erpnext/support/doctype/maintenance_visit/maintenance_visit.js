@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 frappe.provide("erpnext.support");
@@ -27,11 +27,11 @@ erpnext.support.MaintenanceVisit = frappe.ui.form.Controller.extend({
 						}
 					})
 				}, "icon-download", "btn-default");
-			cur_frm.add_custom_button(__('From Customer Issue'),
+			cur_frm.add_custom_button(__('From Warranty Claim'),
 				function() {
 					frappe.model.map_current_doc({
-						method: "erpnext.support.doctype.customer_issue.customer_issue.make_maintenance_visit",
-						source_doctype: "Customer Issue",
+						method: "erpnext.support.doctype.warranty_claim.warranty_claim.make_maintenance_visit",
+						source_doctype: "Warranty Claim",
 						get_query_filters: {
 							status: ["in", "Open, Work in Progress"],
 							customer: cur_frm.doc.customer || undefined,
@@ -77,7 +77,7 @@ cur_frm.fields_dict['contact_person'].get_query = function(doc, cdt, cdn) {
 
 cur_frm.fields_dict['purposes'].grid.get_field('item_code').get_query = function(doc, cdt, cdn) {
 	return{
-    	filters:{ 'is_service_item': "Yes"}
+    	filters:{ 'is_service_item': 1}
   	}
 }
 

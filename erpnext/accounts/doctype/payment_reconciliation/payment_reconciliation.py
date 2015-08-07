@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
@@ -190,10 +190,11 @@ class PaymentReconciliation(Document):
 				if flt(p.allocated_amount) > flt(p.amount):
 					frappe.throw(_("Row {0}: Allocated amount {1} must be less than or equals to JV amount {2}")
 						.format(p.idx, p.allocated_amount, p.amount))
-
-				if flt(p.allocated_amount) > unreconciled_invoices.get(p.invoice_type, {}).get(p.invoice_number):
+				
+				invoice_outstanding = unreconciled_invoices.get(p.invoice_type, {}).get(p.invoice_number)
+				if flt(p.allocated_amount) - invoice_outstanding > 0.009:
 					frappe.throw(_("Row {0}: Allocated amount {1} must be less than or equals to invoice outstanding amount {2}")
-						.format(p.idx, p.allocated_amount, unreconciled_invoices.get(p.invoice_type, {}).get(p.invoice_number)))
+						.format(p.idx, p.allocated_amount, invoice_outstanding))
 
 		if not invoices_to_reconcile:
 			frappe.throw(_("Please select Allocated Amount, Invoice Type and Invoice Number in atleast one row"))

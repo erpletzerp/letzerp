@@ -11,7 +11,7 @@
   {
    "fieldname": "basic_info", 
    "fieldtype": "Section Break", 
-   "label": "Basic Info", 
+   "label": "", 
    "oldfieldtype": "Section Break", 
    "options": "icon-user", 
    "permlevel": 0
@@ -55,6 +55,13 @@
    "reqd": 1
   }, 
   {
+   "fieldname": "is_frozen", 
+   "fieldtype": "Check", 
+   "label": "Is Frozen", 
+   "permlevel": 0, 
+   "precision": ""
+  }, 
+  {
    "depends_on": "eval:!doc.__islocal", 
    "fieldname": "address_contacts", 
    "fieldtype": "Section Break", 
@@ -90,6 +97,8 @@
    "permlevel": 0
   }, 
   {
+   "depends_on": "eval:!doc.__islocal", 
+   "description": "Mention if non-standard receivable account applicable", 
    "fieldname": "accounts", 
    "fieldtype": "Table", 
    "label": "Accounts", 
@@ -126,7 +135,7 @@
    "fieldtype": "Link", 
    "ignore_user_permissions": 1, 
    "label": "Taxes and Charges", 
-   "options": "Purchase Taxes and Charges Master", 
+   "options": "Purchase Taxes and Charges Template", 
    "permlevel": 0
   }, 
   {
@@ -170,7 +179,7 @@
  ], 
  "icon": "icon-user", 
  "idx": 1, 
- "modified": "2015-01-20 17:35:41.423211", 
+ "modified": "2015-07-17 09:39:05.318826", 
  "modified_by": "Administrator", 
  "module": "Buying", 
  "name": "Supplier", 
@@ -207,6 +216,7 @@
    "read": 1, 
    "report": 1, 
    "role": "Purchase Master Manager", 
+   "share": 1, 
    "submit": 0, 
    "write": 1
   }, 
@@ -214,7 +224,7 @@
    "apply_user_permissions": 1, 
    "permlevel": 0, 
    "read": 1, 
-   "role": "Material User"
+   "role": "Stock User"
   }, 
   {
    "email": 1, 
@@ -222,7 +232,7 @@
    "print": 1, 
    "read": 1, 
    "report": 1, 
-   "role": "Material Manager"
+   "role": "Stock Manager"
   }, 
   {
    "apply_user_permissions": 1, 

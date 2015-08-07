@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -30,18 +30,19 @@ def execute(filters=None):
 		delivery_note = list(set(invoice_so_dn_map.get(inv.name, {}).get("delivery_note", [])))
 
 		row = [inv.name, inv.posting_date, inv.customer, inv.customer_name,
-		customer_map.get(inv.customer)["customer_group"], customer_map.get(inv.customer)["territory"],
+		customer_map.get(inv.customer, {}).get("customer_group"), 
+		customer_map.get(inv.customer, {}).get("territory"),
 		inv.debit_to, inv.project_name, inv.remarks, ", ".join(sales_order), ", ".join(delivery_note)]
 
 		# map income values
-		net_total = 0
+		base_net_total = 0
 		for income_acc in income_accounts:
 			income_amount = flt(invoice_income_map.get(inv.name, {}).get(income_acc))
-			net_total += income_amount
+			base_net_total += income_amount
 			row.append(income_amount)
 
 		# net total
-		row.append(net_total or inv.net_total)
+		row.append(base_net_total or inv.base_net_total)
 
 		# tax account
 		total_tax = 0
@@ -52,7 +53,7 @@ def execute(filters=None):
 				row.append(tax_amount)
 
 		# total tax, grand total, outstanding amount & rounded total
-		row += [total_tax, inv.grand_total, inv.rounded_total, inv.outstanding_amount]
+		row += [total_tax, inv.base_grand_total, inv.base_rounded_total, inv.outstanding_amount]
 
 		data.append(row)
 
@@ -78,7 +79,7 @@ def get_columns(invoice_list):
 
 		tax_accounts = 	frappe.db.sql_list("""select distinct account_head
 			from `tabSales Taxes and Charges` where parenttype = 'Sales Invoice'
-			and docstatus = 1 and ifnull(tax_amount_after_discount_amount, 0) != 0
+			and docstatus = 1 and ifnull(base_tax_amount_after_discount_amount, 0) != 0
 			and parent in (%s) order by account_head""" %
 			', '.join(['%s']*len(invoice_list)), tuple([inv.name for inv in invoice_list]))
 
@@ -107,13 +108,13 @@ def get_conditions(filters):
 def get_invoices(filters):
 	conditions = get_conditions(filters)
 	return frappe.db.sql("""select name, posting_date, debit_to, project_name, customer,
-		customer_name, remarks, net_total, grand_total, rounded_total, outstanding_amount
+		customer_name, remarks, base_net_total, base_grand_total, base_rounded_total, outstanding_amount
 		from `tabSales Invoice`
 		where docstatus = 1 %s order by posting_date desc, name desc""" %
 		conditions, filters, as_dict=1)
 
 def get_invoice_income_map(invoice_list):
-	income_details = frappe.db.sql("""select parent, income_account, sum(base_amount) as amount
+	income_details = frappe.db.sql("""select parent, income_account, sum(base_net_amount) as amount
 		from `tabSales Invoice Item` where parent in (%s) group by parent, income_account""" %
 		', '.join(['%s']*len(invoice_list)), tuple([inv.name for inv in invoice_list]), as_dict=1)
 
@@ -126,7 +127,7 @@ def get_invoice_income_map(invoice_list):
 
 def get_invoice_tax_map(invoice_list, invoice_income_map, income_accounts):
 	tax_details = frappe.db.sql("""select parent, account_head,
-		sum(tax_amount_after_discount_amount) as tax_amount
+		sum(base_tax_amount_after_discount_amount) as tax_amount
 		from `tabSales Taxes and Charges` where parent in (%s) group by parent, account_head""" %
 		', '.join(['%s']*len(invoice_list)), tuple([inv.name for inv in invoice_list]), as_dict=1)
 
@@ -160,7 +161,7 @@ def get_invoice_so_dn_map(invoice_list):
 			delivery_note_list = [d.delivery_note]
 		elif d.sales_order:
 			delivery_note_list = frappe.db.sql_list("""select distinct parent from `tabDelivery Note Item`
-				where docstatus=1 and prevdoc_detail_docname=%s""", d.so_detail)
+				where docstatus=1 and so_detail=%s""", d.so_detail)
 
 		if delivery_note_list:
 			invoice_so_dn_map.setdefault(d.parent, frappe._dict()).setdefault("delivery_note", delivery_note_list)

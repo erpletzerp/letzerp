@@ -1,13 +1,11 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-pscript['onload_Sales Browser'] = function(wrapper){
+frappe.pages["Sales Browser"].on_page_load = function(wrapper){
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
 		single_column: true,
 	});
-
-	frappe.add_breadcrumbs("Selling")
 
 	wrapper.page.set_secondary_action(__('Refresh'), function() {
 			wrapper.make_tree();
@@ -32,7 +30,7 @@ pscript['onload_Sales Browser'] = function(wrapper){
 	wrapper.make_tree();
 }
 
-pscript['onshow_Sales Browser'] = function(wrapper){
+frappe.pages['Sales Browser'].on_page_show = function(wrapper){
 	// set route
 	var ctype = frappe.get_route()[1] || 'Territory';
 
@@ -41,6 +39,8 @@ pscript['onshow_Sales Browser'] = function(wrapper){
 	if(erpnext.sales_chart && erpnext.sales_chart.ctype != ctype) {
 		wrapper.make_tree();
 	}
+
+	frappe.breadcrumbs.add(frappe.breadcrumbs.last_module || "Selling");
 };
 
 erpnext.SalesChart = Class.extend({
@@ -122,7 +122,7 @@ erpnext.SalesChart = Class.extend({
 
 		if(me.ctype == "Sales Person") {
 			fields.splice(-1, 0, {fieldtype:'Link', fieldname:'employee', label:__('Employee'),
-				options:'Employee', description: __("Please enter Employee Id of this sales parson")});
+				options:'Employee', description: __("Please enter Employee Id of this sales person")});
 		}
 
 		// the dialog

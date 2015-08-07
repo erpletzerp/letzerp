@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
@@ -10,6 +10,7 @@ from frappe import _
 from erpnext.stock.utils import get_valid_serial_nos
 
 from erpnext.utilities.transaction_base import TransactionBase
+from erpnext.accounts.utils import validate_fiscal_year
 
 class InstallationNote(TransactionBase):
 	def __init__(self, arg1, arg2=None):
@@ -30,22 +31,18 @@ class InstallationNote(TransactionBase):
 		}]
 
 	def validate(self):
-		self.validate_fiscal_year()
+		validate_fiscal_year(self.inst_date, self.fiscal_year, _("Installation Date"), self)
 		self.validate_installation_date()
 		self.check_item_table()
 
 		from erpnext.controllers.selling_controller import check_active_sales_items
 		check_active_sales_items(self)
 
-	def validate_fiscal_year(self):
-		from erpnext.accounts.utils import validate_fiscal_year
-		validate_fiscal_year(self.inst_date, self.fiscal_year, "Installation Date")
-
 	def is_serial_no_added(self, item_code, serial_no):
-		ar_required = frappe.db.get_value("Item", item_code, "has_serial_no")
-		if ar_required == 'Yes' and not serial_no:
+		has_serial_no = frappe.db.get_value("Item", item_code, "has_serial_no")
+		if has_serial_no == 1 and not serial_no:
 			frappe.throw(_("Serial No is mandatory for Item {0}").format(item_code))
-		elif ar_required != 'Yes' and cstr(serial_no).strip():
+		elif has_serial_no != 1 and cstr(serial_no).strip():
 			frappe.throw(_("Item {0} is not a serialized Item").format(item_code))
 
 	def is_serial_no_exist(self, item_code, serial_no):
@@ -72,7 +69,7 @@ class InstallationNote(TransactionBase):
 				frappe.throw(_("Serial No {0} does not belong to Delivery Note {1}").format(sr, prevdoc_docname))
 
 	def validate_serial_no(self):
-		cur_s_no, prevdoc_s_no, sr_list = [], [], []
+		prevdoc_s_no, sr_list = [], []
 		for d in self.get('items'):
 			self.is_serial_no_added(d.item_code, d.serial_no)
 			if d.serial_no:

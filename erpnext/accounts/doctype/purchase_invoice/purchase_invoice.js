@@ -1,9 +1,8 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 frappe.provide("erpnext.accounts");
 {% include 'buying/doctype/purchase_common/purchase_common.js' %};
-{% include 'accounts/doctype/purchase_taxes_and_charges_master/purchase_taxes_and_charges_master.js' %}
 
 erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 	onload: function() {
@@ -21,26 +20,19 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 		this._super();
 
 		// Show / Hide button
-		if(doc.docstatus==1 && doc.outstanding_amount > 0)
-			this.frm.add_custom_button(__('Make Payment Entry'), this.make_bank_entry,
-				frappe.boot.doctype_icons["Journal Entry"]);
-
-		if(doc.docstatus==1) {
-			cur_frm.add_custom_button(__('View Ledger'), function() {
-				frappe.route_options = {
-					"voucher_no": doc.name,
-					"from_date": doc.posting_date,
-					"to_date": doc.posting_date,
-					"company": doc.company,
-					group_by_voucher: 0
-				};
-				frappe.set_route("query-report", "General Ledger");
-			}, "icon-table");
-		}
-
-		if(doc.docstatus===0) {
-			cur_frm.add_custom_button(__('From Purchase Order'),
-				function() {
+		this.show_general_ledger();
+		
+		if(!doc.is_return) {
+			if(doc.docstatus==1) {
+				if(doc.outstanding_amount > 0) {
+					this.frm.add_custom_button(__('Make Payment Entry'), this.make_bank_entry);
+				}
+				
+				cur_frm.add_custom_button(__('Make Debit Note'), this.make_debit_note);
+			}
+			
+			if(doc.docstatus===0) {
+				cur_frm.add_custom_button(__('From Purchase Order'), function() {
 					frappe.model.map_current_doc({
 						method: "erpnext.buying.doctype.purchase_order.purchase_order.make_purchase_invoice",
 						source_doctype: "Purchase Order",
@@ -52,10 +44,9 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 							company: cur_frm.doc.company
 						}
 					})
-				}, "icon-download", "btn-default");
+				});
 
-			cur_frm.add_custom_button(__('From Purchase Receipt'),
-				function() {
+				cur_frm.add_custom_button(__('From Purchase Receipt'), function() {
 					frappe.model.map_current_doc({
 						method: "erpnext.stock.doctype.purchase_receipt.purchase_receipt.make_purchase_invoice",
 						source_doctype: "Purchase Receipt",
@@ -65,11 +56,9 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 							company: cur_frm.doc.company
 						}
 					})
-				}, "icon-download", "btn-default");
-
+				});
+			}
 		}
-
-		this.is_opening(doc);
 	},
 
 	supplier: function() {
@@ -94,7 +83,7 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 	},
 
 	allocated_amount: function() {
-		this.calculate_total_advance("Purchase Invoice", "advances");
+		this.calculate_total_advance();
 		this.frm.refresh_fields();
 	},
 
@@ -112,15 +101,17 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 		$.each(this.frm.doc["items"] || [], function(i, row) {
 			if(row.purchase_receipt) frappe.model.clear_doc("Purchase Receipt", row.purchase_receipt)
 		})
-	}
+	},
+	
+	make_debit_note: function() {
+		frappe.model.open_mapped_doc({
+			method: "erpnext.accounts.doctype.purchase_invoice.purchase_invoice.make_debit_note",
+			frm: cur_frm
+		})
+	},
 });
 
 cur_frm.script_manager.make(erpnext.accounts.PurchaseInvoice);
-
-cur_frm.cscript.is_opening = function(doc, dt, dn) {
-	hide_field('aging_date');
-	if (doc.is_opening == 'Yes') unhide_field('aging_date');
-}
 
 cur_frm.cscript.make_bank_entry = function() {
 	return frappe.call({
@@ -152,7 +143,7 @@ cur_frm.fields_dict['items'].grid.get_field("item_code").get_query = function(do
 	return {
 		query: "erpnext.controllers.queries.item_query",
 		filters:{
-			'is_purchase_item': 'Yes'
+			'is_purchase_item': 1
 		}
 	}
 }
@@ -162,7 +153,7 @@ cur_frm.fields_dict['credit_to'].get_query = function(doc) {
 		filters:{
 			'account_type': 'Payable',
 			'root_type': 'Liability',
-			'group_or_ledger': 'Ledger',
+			'is_group': 0,
 			'company': doc.company
 		}
 	}
@@ -199,7 +190,7 @@ cur_frm.fields_dict["items"].grid.get_field("cost_center").get_query = function(
 	return {
 		filters: {
 			'company': doc.company,
-			'group_or_ledger': 'Ledger'
+			'is_group': 0
 		}
 
 	}

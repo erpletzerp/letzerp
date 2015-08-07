@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
 cur_frm.cscript.refresh = function(doc) {
@@ -11,7 +11,7 @@ cur_frm.fields_dict['accounts'].grid.get_field('account').get_query = function(d
 		filters: {
 			'account_type': 'Payable',
 			'company': d.company,
-			'group_or_ledger': 'Ledger'
+			"is_group": 0
 		}
 	}
 }

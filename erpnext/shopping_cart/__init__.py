@@ -1,11 +1,11 @@
-# Copyright (c) 2013, Web Notes Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
 import frappe
 from frappe import _
 from frappe.utils import get_fullname, flt
-from erpnext.shopping_cart.doctype.shopping_cart_settings.shopping_cart_settings import is_shopping_cart_enabled, get_default_territory
+from erpnext.shopping_cart.doctype.shopping_cart_settings.shopping_cart_settings import check_shopping_cart_enabled, get_default_territory
 
 # TODO
 # validate stock of each item in Website Warehouse or have a list of possible warehouses in Shopping Cart Settings
@@ -17,18 +17,20 @@ def get_quotation(user=None):
 	if user == "Guest":
 		raise frappe.PermissionError
 
-	is_shopping_cart_enabled()
+	check_shopping_cart_enabled()
 	party = get_party(user)
 	values = {
 		"order_type": "Shopping Cart",
 		party.doctype.lower(): party.name,
 		"docstatus": 0,
 		"contact_email": user,
-		"selling_price_list": "_Test Price List Rest of the World"
+		"selling_price_list": "_Test Price List Rest of the World",
+		"currency": "USD"
 	}
 
 	try:
 		quotation = frappe.get_doc("Quotation", values)
+		
 	except frappe.DoesNotExistError:
 		quotation = frappe.new_doc("Quotation")
 		quotation.update(values)
@@ -43,7 +45,6 @@ def set_item_in_cart(item_code, qty, user=None):
 	quotation = get_quotation(user=user)
 	qty = flt(qty)
 	quotation_item = quotation.get("items", {"item_code": item_code})
-
 	if qty==0:
 		if quotation_item:
 			# remove
@@ -58,7 +59,6 @@ def set_item_in_cart(item_code, qty, user=None):
 				"item_code": item_code,
 				"qty": qty
 			})
-
 	quotation.save(ignore_permissions=True)
 	return quotation
 
