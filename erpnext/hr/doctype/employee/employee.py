@@ -183,12 +183,12 @@ def validate_employee_role(doc, method):
 			doc.get("user_roles").remove(doc.get("user_roles", {"role": "Employee"})[0])
 
 	# gangadhar for limit user creation 
-	from frappe.utils import get_url, cstr
-	if(get_url()!='http://demo.letzerp.com'):
-		if doc.get("__islocal"):
-			total_users=frappe.db.sql("select count(name) from tabUser")
-			if (total_users and cint(total_users[0][0])>=5):
-				throw(_("You can create only 5 user in demo subscription ....!"))
+	# from frappe.utils import get_url, cstr
+	# if(get_url()!='http://demo.letzerp.com'):
+	# 	if doc.get("__islocal"):
+	# 		total_users=frappe.db.sql("select count(name) from tabUser")
+	# 		if (total_users and cint(total_users[0][0])>=5):
+	# 			throw(_("You can create only 5 user in demo subscription ....!"))
 
 
 def update_user_permissions(doc, method):

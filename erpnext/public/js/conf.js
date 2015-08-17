@@ -12,8 +12,8 @@ $(document).bind('toolbar_setup', function() {
 
 	$('.navbar-home').html("<img src='/files/letzerp.jpg' style='max-width:250px; height:30px'>");
 
-	$('.navbar-home').html('<img class="erpnext-icon" src="'+
-			frappe.urllib.get_base_url()+'/assets/erpnext/images/erp-icon.svg" />');
+	// $('.navbar-home').html('<img class="erpnext-icon" src="'+
+	// 		frappe.urllib.get_base_url()+'/assets/erpnext/images/erp-icon.svg" />');
 
 	$('[data-link="docs"]').attr("href", "https://manual.erpnext.com")
 });

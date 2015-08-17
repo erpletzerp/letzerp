@@ -156,127 +156,129 @@ erpnext.buying.BuyingController = erpnext.TransactionController.extend({
 		}
 	},
 
-	calculate_taxes_and_totals: function() {
-		this._super();
-		this.calculate_total_advance("Purchase Invoice", "advances");
-		this.frm.refresh_fields();
-	},
+// 	calculate_taxes_and_totals: function() {
+// 		this._super();
+// 		this.calculate_total_advance("Purchase Invoice", "advances");
+// 		this.frm.refresh_fields();
+// 	},
 
-	calculate_item_values: function() {
-		var me = this;
+// 	calculate_item_values: function() {
+// 		var me = this;
 
-		$.each(this.frm.doc["items"] || [], function(i, item) {
-			frappe.model.round_floats_in(item);
-			item.amount = flt(item.rate * item.qty, precision("amount", item));
-			item.item_tax_amount = 0.0;
+// 		$.each(this.frm.doc["items"] || [], function(i, item) {
+// 			frappe.model.round_floats_in(item);
+// 			item.amount = flt(item.rate * item.qty, precision("amount", item));
+// 			item.item_tax_amount = 0.0;
 
-			me._set_in_company_currency(item, "price_list_rate", "base_price_list_rate");
-			me._set_in_company_currency(item, "rate", "base_rate");
-			me._set_in_company_currency(item, "amount", "base_amount");
-		});
+// 			me._set_in_company_currency(item, "price_list_rate", "base_price_list_rate");
+// 			me._set_in_company_currency(item, "rate", "base_rate");
+// 			me._set_in_company_currency(item, "amount", "base_amount");
+// 		});
 
-	},
+// 	},
 
-	calculate_net_total: function() {
-		var me = this;
+// 	calculate_net_total: function() {
+// 		var me = this;
 
-		this.frm.doc.net_total = this.frm.doc.net_total_import = 0.0;
-		$.each(this.frm.doc["items"] || [], function(i, item) {
-			me.frm.doc.net_total += item.base_amount;
-			me.frm.doc.net_total_import += item.amount;
-		});
+// 		this.frm.doc.net_total = this.frm.doc.net_total_import = 0.0;
+// 		$.each(this.frm.doc["items"] || [], function(i, item) {
+// 			me.frm.doc.net_total += item.base_amount;
+// 			me.frm.doc.net_total_import += item.amount;
+// 		});
 
-		frappe.model.round_floats_in(this.frm.doc, ["net_total", "net_total_import"]);
-	},
+// 		frappe.model.round_floats_in(this.frm.doc, ["net_total", "net_total_import"]);
+// 	},
 
-	calculate_totals: function() {
-		var tax_count = this.frm.doc["taxes"] ? this.frm.doc["taxes"].length : 0;
-		this.frm.doc.grand_total = flt(tax_count ?
-			this.frm.doc["taxes"][tax_count - 1].total : this.frm.doc.net_total);
-		this.frm.doc.grand_total_import = flt(tax_count ?
-			flt(this.frm.doc.grand_total / this.frm.doc.conversion_rate) : this.frm.doc.net_total_import);
+// 	calculate_totals: function() {
+// 		var tax_count = this.frm.doc["taxes"] ? this.frm.doc["taxes"].length : 0;
+// 		this.frm.doc.grand_total = flt(tax_count ?
+// 			this.frm.doc["taxes"][tax_count - 1].total : this.frm.doc.net_total);
+// 		this.frm.doc.grand_total_import = flt(tax_count ?
+// 			flt(this.frm.doc.grand_total / this.frm.doc.conversion_rate) : this.frm.doc.net_total_import);
 
-		this.frm.doc.total_tax = flt(this.frm.doc.grand_total - this.frm.doc.net_total,
-			precision("total_tax"));
+// 		this.frm.doc.total_tax = flt(this.frm.doc.grand_total - this.frm.doc.net_total,
+// 			precision("total_tax"));
 
-		this.frm.doc.grand_total = flt(this.frm.doc.grand_total, precision("grand_total"));
-		this.frm.doc.grand_total_import = flt(this.frm.doc.grand_total_import, precision("grand_total_import"));
+// 		this.frm.doc.grand_total = flt(this.frm.doc.grand_total, precision("grand_total"));
+// 		this.frm.doc.grand_total_import = flt(this.frm.doc.grand_total_import, precision("grand_total_import"));
 
-		// rounded totals
-		if(frappe.meta.get_docfield(this.frm.doc.doctype, "rounded_total", this.frm.doc.name)) {
-			this.frm.doc.rounded_total = Math.round(this.frm.doc.grand_total);
-		}
+// 		// rounded totals
+// 		if(frappe.meta.get_docfield(this.frm.doc.doctype, "rounded_total", this.frm.doc.name)) {
+// 			this.frm.doc.rounded_total = Math.round(this.frm.doc.grand_total);
+// 		}
 
-		if(frappe.meta.get_docfield(this.frm.doc.doctype, "rounded_total_import", this.frm.doc.name)) {
-			this.frm.doc.rounded_total_import = Math.round(this.frm.doc.grand_total_import);
-		}
+// 		if(frappe.meta.get_docfield(this.frm.doc.doctype, "rounded_total_import", this.frm.doc.name)) {
+// 			this.frm.doc.rounded_total_import = Math.round(this.frm.doc.grand_total_import);
+// 		}
 
-		// other charges added/deducted
-		this.frm.doc.other_charges_added = 0.0
-		this.frm.doc.other_charges_deducted = 0.0
-		if(tax_count) {
-			this.frm.doc.other_charges_added = frappe.utils.sum($.map(this.frm.doc["taxes"],
-				function(tax) { return (tax.add_deduct_tax == "Add"
-					&& in_list(["Valuation and Total", "Total"], tax.category)) ?
-					tax.tax_amount : 0.0; }));
+// 		// other charges added/deducted
+// 		this.frm.doc.other_charges_added = 0.0
+// 		this.frm.doc.other_charges_deducted = 0.0
+// 		if(tax_count) {
+// 			this.frm.doc.other_charges_added = frappe.utils.sum($.map(this.frm.doc["taxes"],
+// 				function(tax) { return (tax.add_deduct_tax == "Add"
+// 					&& in_list(["Valuation and Total", "Total"], tax.category)) ?
+// 					tax.tax_amount : 0.0; }));
 
-			this.frm.doc.other_charges_deducted = frappe.utils.sum($.map(this.frm.doc["taxes"],
-				function(tax) { return (tax.add_deduct_tax == "Deduct"
-					&& in_list(["Valuation and Total", "Total"], tax.category)) ?
-					tax.tax_amount : 0.0; }));
+// 			this.frm.doc.other_charges_deducted = frappe.utils.sum($.map(this.frm.doc["taxes"],
+// 				function(tax) { return (tax.add_deduct_tax == "Deduct"
+// 					&& in_list(["Valuation and Total", "Total"], tax.category)) ?
+// 					tax.tax_amount : 0.0; }));
 
-			frappe.model.round_floats_in(this.frm.doc,
-				["other_charges_added", "other_charges_deducted"]);
-		}
-		this.frm.doc.other_charges_added_import = flt(this.frm.doc.other_charges_added /
-			this.frm.doc.conversion_rate, precision("other_charges_added_import"));
-		this.frm.doc.other_charges_deducted_import = flt(this.frm.doc.other_charges_deducted /
-			this.frm.doc.conversion_rate, precision("other_charges_deducted_import"));
-	},
+// 			frappe.model.round_floats_in(this.frm.doc,
+// 				["other_charges_added", "other_charges_deducted"]);
+// 		}
+// 		this.frm.doc.other_charges_added_import = flt(this.frm.doc.other_charges_added /
+// 			this.frm.doc.conversion_rate, precision("other_charges_added_import"));
+// 		this.frm.doc.other_charges_deducted_import = flt(this.frm.doc.other_charges_deducted /
+// 			this.frm.doc.conversion_rate, precision("other_charges_deducted_import"));
+// 	},
 
-	/*_cleanup: function() {
-		this._super();
-		this.frm.doc.in_words = this.frm.doc.in_words_import = "";
+// // 	/*_cleanup: function() {
+// // 		this._super();
+// // 		this.frm.doc.in_words = this.frm.doc.in_words_import = "";
 
-		if(this.frm.doc["items"].length) {
-			if(!frappe.meta.get_docfield(this.frm.doc["items"][0].doctype, "item_tax_amount", this.frm.doctype)) {
-				$.each(this.frm.doc["items"] || [], function(i, item) {
-					delete item["item_tax_amount"];
-				});
-			}
-		}
+// // 		if(this.frm.doc["items"].length) {
+// // 			if(!frappe.meta.get_docfield(this.frm.doc["items"][0].doctype, "item_tax_amount", this.frm.doctype)) {
+// // 				$.each(this.frm.doc["items"] || [], function(i, item) {
+// // 					delete item["item_tax_amount"];
+// // 				});
+// // 			}
+// // 		}
 
-		if(this.frm.doc["taxes"].length) {
-			if(!frappe.meta.get_docfield(this.frm.doc["taxes"][0].doctype, "tax_amount_after_discount_amount", this.frm.doctype)) {
-				$.each(this.frm.doc["taxes"] || [], function(i, tax) {
-					delete tax["tax_amount_after_discount_amount"];
-				});
-			}
-		}
-	},*/
+// // 		if(this.frm.doc["taxes"].length) {
+// // 			if(!frappe.meta.get_docfield(this.frm.doc["taxes"][0].doctype, "tax_amount_after_discount_amount", this.frm.doctype)) {
+// // 				$.each(this.frm.doc["taxes"] || [], function(i, tax) {
+// // 					delete tax["tax_amount_after_discount_amount"];
+// // 				});
+// // 			}
+// // 		}
+// // 	},*/
 
-	_cleanup: function() {
-		this._super();
-		this.frm.doc.in_words = this.frm.doc.in_words_import = "";
-		if(this.frm.doc["items"]) {
-			if(this.frm.doc["items"].length){
-				if(!frappe.meta.get_docfield(this.frm.doc["items"][0].doctype, "item_tax_amount", this.frm.doctype)) {
-					$.each(this.frm.doc["items"] || [], function(i, item) {
-						delete item["item_tax_amount"];
-					});
-				}
-			}
-		}
+// 	_cleanup: function() {
+// 		this._super();
+// 		this.frm.doc.in_words = this.frm.doc.in_words_import = "";
+// 		if(this.frm.doc["items"]) {
+// 			if(this.frm.doc["items"].length){
+// 				if(!frappe.meta.get_docfield(this.frm.doc["items"][0].doctype, "item_tax_amount", this.frm.doctype)) {
+// 					$.each(this.frm.doc["items"] || [], function(i, item) {
+// 						delete item["item_tax_amount"];
+// 					});
+// 				}
+// 			}
+// 		}
 
-		if(this.frm.doc["taxes"]) {
-			if(this.frm.doc["taxes"].length){
-				if(!frappe.meta.get_docfield(this.frm.doc["taxes"][0].doctype, "tax_amount_after_discount_amount", this.frm.doctype)) {
-					$.each(this.frm.doc["taxes"] || [], function(i, tax) {
-						delete tax["tax_amount_after_discount_amount"];
-					});
-				}
-			}
-		}
+// 		if(this.frm.doc["taxes"]) {
+// 			if(this.frm.doc["taxes"].length){
+// 				if(!frappe.meta.get_docfield(this.frm.doc["taxes"][0].doctype, "tax_amount_after_discount_amount", this.frm.doctype)) {
+// 					$.each(this.frm.doc["taxes"] || [], function(i, tax) {
+// 						delete tax["tax_amount_after_discount_amount"];
+// 					});
+// 				}
+// 			}
+// 		}
+// 	},
+	
 	add_deduct_tax: function(doc, cdt, cdn) {
 		this.calculate_taxes_and_totals();
 	},
